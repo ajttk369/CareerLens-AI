@@ -52,7 +52,7 @@ const stackIcons = [Code2, Server, Bot, Database, Layers3, MonitorSmartphone];
 export function ProjectStackSection() {
   return (
     <section className="print-hidden border-b border-slate-200 bg-white">
-      <div className="mx-auto grid max-w-[1320px] gap-5 px-5 py-10 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]">
+      <div className="mx-auto grid max-w-[1320px] gap-5 px-4 py-10 min-[380px]:px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
           <p className="text-xs font-extrabold tracking-[0.14em] text-blue-600">
             TECH STACK

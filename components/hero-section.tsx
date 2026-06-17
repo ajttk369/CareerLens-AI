@@ -33,13 +33,13 @@ export function HeroSection() {
     >
       <div className="hero-grid absolute inset-0 opacity-80" />
 
-      <div className="relative mx-auto grid min-h-[620px] max-w-7xl items-center gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.04fr_0.96fr] lg:py-24">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 min-[380px]:px-5 sm:px-8 sm:py-20 lg:min-h-[620px] lg:grid-cols-[1.04fr_0.96fr] lg:py-24">
         <div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[13px] font-extrabold text-blue-700">
             <Sparkles className="size-3.5" />
             PORTFOLIO REVIEW
           </div>
-          <h1 className="max-w-3xl text-[2.45rem] font-black leading-[1.12] tracking-[-0.035em] text-slate-950 sm:text-5xl lg:text-[3.75rem]">
+          <h1 className="max-w-3xl text-[2.05rem] font-black leading-[1.14] tracking-[-0.02em] text-slate-950 min-[380px]:text-[2.35rem] sm:text-5xl lg:text-[3.75rem] lg:tracking-[-0.035em]">
             지원 내용을 한눈에 정리하는
             <br />
             <span className="text-blue-600">포트폴리오 분석 도구</span>
@@ -49,7 +49,7 @@ export function HeroSection() {
             보완점, 개선 문구, 면접 질문을 정리합니다.
           </p>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="mt-8 grid gap-3 min-[560px]:grid-cols-3">
             {highlights.map(({ icon: Icon, title, text }) => (
               <div
                 className="flex min-h-36 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60"
@@ -83,7 +83,7 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-xl">
+        <div className="relative mx-auto w-full max-w-xl min-w-0">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/70 sm:p-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
@@ -120,14 +120,14 @@ export function HeroSection() {
               </p>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="mt-4 grid gap-2.5 min-[390px]:grid-cols-3 sm:gap-3">
               {[
                 ["첫인상", "84"],
                 ["기술력", "78"],
                 ["직무 적합도", "86"],
               ].map(([label, score]) => (
                 <div
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-3 min-[390px]:p-3.5"
                   key={label}
                 >
                   <p className="text-[13px] font-extrabold text-slate-500">

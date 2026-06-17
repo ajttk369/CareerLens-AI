@@ -15,7 +15,7 @@ export default function Home() {
         <AnalysisHistory />
       </main>
       <footer className="print-hidden border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1320px] flex-col justify-between gap-3 px-5 py-8 text-xs font-semibold text-slate-500 sm:flex-row sm:px-8">
+        <div className="mx-auto flex max-w-[1320px] flex-col justify-between gap-3 px-4 py-8 text-xs font-semibold text-slate-500 min-[380px]:px-5 sm:flex-row sm:px-8">
           <p className="text-slate-700">CareerLens AI · Portfolio Review</p>
           <p>Next.js · OpenAI · Supabase · Vercel</p>
         </div>

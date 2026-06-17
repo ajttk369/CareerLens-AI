@@ -223,7 +223,7 @@ export function AnalysisForm({
 
   return (
     <form
-      className="input-panel-scroll max-h-none overflow-visible rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/70 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto"
+      className="input-panel-scroll max-h-none overflow-visible rounded-3xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/70 min-[380px]:p-6 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto"
       onSubmit={handleSubmit}
     >
       <div className="mb-7">
@@ -267,10 +267,10 @@ export function AnalysisForm({
           <legend className="mb-3.5 text-sm font-extrabold text-slate-800">
             지원 직무
           </legend>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-2">
+          <div className="grid gap-2.5 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-2">
             {JOB_ROLES.map((role) => (
               <button
-                className={`min-h-12 whitespace-nowrap rounded-2xl border px-3.5 text-[13px] font-bold leading-5 transition ${
+                className={`min-h-12 whitespace-normal break-keep rounded-2xl border px-3.5 text-[13px] font-bold leading-5 transition ${
                   form.role === role
                     ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-600/15"
                     : "border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-300 hover:bg-white hover:text-blue-700"
@@ -408,7 +408,7 @@ export function AnalysisForm({
             </>
           )}
         </button>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="grid gap-2 min-[420px]:grid-cols-2 lg:grid-cols-1">
           <button
             className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
             disabled={isLoading}
@@ -656,7 +656,7 @@ function ProjectCard({
           <p className="text-xs font-extrabold tracking-[0.08em] text-slate-500">
             PROJECT {index + 1}
           </p>
-          <p className="mt-1 truncate text-sm font-semibold text-slate-700">
+          <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-700">
             {summary}
           </p>
         </div>

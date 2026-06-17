@@ -82,9 +82,9 @@ export function CareerReviewApp() {
   }
 
   return (
-    <section className="bg-slate-50 py-14 sm:py-20" id="analyze">
-      <div className="mx-auto max-w-[1320px] px-5 sm:px-8">
-        <div className="grid items-start gap-7 lg:grid-cols-[minmax(360px,380px)_minmax(0,1fr)]">
+    <section className="bg-slate-50 py-10 sm:py-20" id="analyze">
+      <div className="mx-auto max-w-[1320px] px-4 min-[380px]:px-5 sm:px-8">
+        <div className="grid min-w-0 items-start gap-7 lg:grid-cols-[minmax(360px,380px)_minmax(0,1fr)]">
           <div className="print-hidden lg:sticky lg:top-24">
             <AnalysisForm
               hasResult={Boolean(result)}
@@ -99,7 +99,7 @@ export function CareerReviewApp() {
             />
           </div>
 
-          <div ref={resultRef}>
+          <div className="min-w-0" ref={resultRef}>
             {error ? (
               <ErrorCard message={error} />
             ) : null}
@@ -137,7 +137,7 @@ function ErrorCard({ message }: { message: string }) {
 
 function EmptyResults() {
   return (
-    <div className="flex min-h-[560px] items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white p-7 text-center">
+    <div className="flex min-h-[420px] items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white p-5 text-center sm:min-h-[560px] sm:p-7">
       <div className="max-w-md">
         <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-blue-50 text-2xl font-black text-blue-600">
           01

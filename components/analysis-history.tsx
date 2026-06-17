@@ -105,8 +105,8 @@ export function AnalysisHistory() {
 
   return (
     <section className="print-hidden bg-slate-50 pb-16">
-      <div className="mx-auto max-w-[1320px] px-5 sm:px-8">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
+      <div className="mx-auto max-w-[1320px] px-4 min-[380px]:px-5 sm:px-8">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 min-[380px]:p-6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs font-extrabold tracking-[0.14em] text-blue-600">
@@ -161,11 +161,11 @@ export function AnalysisHistory() {
                   <p className="mt-4 text-sm font-semibold leading-6 text-slate-700">
                     {item.summary}
                   </p>
-                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                    <p className="truncate text-xs font-bold text-slate-400">
+                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
+                    <p className="break-words text-xs font-bold leading-5 text-slate-400 min-[520px]:truncate">
                       {item.techStack}
                     </p>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="grid shrink-0 grid-cols-2 gap-2 min-[520px]:flex min-[520px]:items-center">
                       <a
                         className="inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
                         href={`/report/${item.id}`}

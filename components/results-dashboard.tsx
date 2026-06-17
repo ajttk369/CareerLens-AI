@@ -325,14 +325,14 @@ export function ResultsDashboard({
         targetScore={targetAverage}
       />
 
-      <article className="rounded-3xl border border-blue-100 bg-white shadow-lg shadow-slate-200/70">
+      <article className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-lg shadow-slate-200/70">
         <div className="grid gap-0 lg:grid-cols-[260px_1fr]">
           <div className="bg-slate-950 p-6 text-white sm:p-8">
             <p className="text-sm font-extrabold tracking-[0.1em] text-blue-300">
               TOTAL SCORE
             </p>
             <div className="mt-5 flex items-end gap-2">
-              <p className="text-7xl font-black tracking-[-0.07em]">
+              <p className="text-6xl font-black tracking-[-0.04em] min-[380px]:text-7xl lg:tracking-[-0.07em]">
                 {average}
               </p>
               <span className="pb-3 text-sm font-bold text-slate-400">
@@ -349,7 +349,7 @@ export function ResultsDashboard({
             </p>
           </div>
 
-          <div className="p-6 sm:p-8">
+          <div className="p-5 min-[380px]:p-6 sm:p-8">
             <p className="text-[13px] font-extrabold tracking-[0.1em] text-blue-600">
               SUMMARY
             </p>
@@ -479,7 +479,7 @@ export function ResultsDashboard({
                   </p>
                 </div>
                 <button
-                  className="print-hidden mt-4 inline-flex min-h-11 min-w-[104px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 px-4 text-xs font-extrabold text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                  className="print-hidden mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 px-4 text-xs font-extrabold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 min-[420px]:w-auto"
                   onClick={() => copyText(copyValue, `question-${index}`)}
                   type="button"
                 >
@@ -497,7 +497,7 @@ export function ResultsDashboard({
           })}
         </div>
         <button
-          className="print-hidden mt-4 inline-flex min-h-11 min-w-[164px] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-slate-950 px-5 text-sm font-extrabold text-white transition hover:bg-blue-600"
+          className="print-hidden mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-slate-950 px-5 text-sm font-extrabold text-white transition hover:bg-blue-600 min-[420px]:w-auto"
           onClick={() =>
             copyText(
               result.interviewQuestions
@@ -540,7 +540,7 @@ function ProgressSnapshot({
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="mb-4 grid gap-3 md:grid-cols-3">
+    <div className="mb-4 grid gap-3 sm:grid-cols-3">
       <SnapshotCard label="현재 종합 점수" value={`${currentScore}점`} />
       <SnapshotCard label="개선 목표" value={`${targetScore}점`} />
       <SnapshotCard

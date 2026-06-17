@@ -51,8 +51,8 @@ export default async function ReportPage({ params }: ReportPageProps) {
   );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-8 sm:px-8">
-      <article className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/80 sm:p-10">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 min-[380px]:px-5 sm:px-8 sm:py-8">
+      <article className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/80 min-[380px]:p-6 sm:p-10">
         <header className="flex flex-col justify-between gap-6 border-b border-slate-200 pb-8 sm:flex-row sm:items-start">
           <div>
             <div className="flex items-center gap-3">

@@ -11,10 +11,14 @@
 
 html {
   scroll-behavior: smooth;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  width: 100%;
+  overflow-x: hidden;
   background: var(--background);
   color: var(--foreground);
   font-family:
@@ -41,6 +45,12 @@ select {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
 }
 
 ::selection {
