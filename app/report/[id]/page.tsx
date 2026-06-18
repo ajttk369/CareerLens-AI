@@ -54,7 +54,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
     <main className="min-h-screen bg-slate-50 px-4 py-6 min-[380px]:px-5 sm:px-8 sm:py-8">
       <article className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/80 min-[380px]:p-6 sm:p-10">
         <header className="flex flex-col justify-between gap-6 border-b border-slate-200 pb-8 sm:flex-row sm:items-start">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-3">
               <BrandMark />
               <div>
@@ -66,21 +66,26 @@ export default async function ReportPage({ params }: ReportPageProps) {
                 </p>
               </div>
             </div>
-            <h1 className="mt-8 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">
+            <h1 className="mt-8 break-keep text-3xl font-black leading-tight tracking-[-0.04em] text-slate-950 sm:text-4xl">
               {report.role} 지원 분석 리포트
             </h1>
             <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
               {new Date(report.created_at).toLocaleString("ko-KR")} 저장됨
             </p>
           </div>
-          <div className="rounded-3xl bg-slate-950 p-6 text-white">
+
+          <div className="w-full rounded-3xl bg-slate-950 p-6 text-white sm:w-auto sm:min-w-[180px]">
             <p className="text-sm font-extrabold tracking-[0.1em] text-blue-300">
               TOTAL SCORE
             </p>
-            <p className="mt-3 text-6xl font-black tracking-[-0.07em]">
-              {average}
-              <span className="ml-1 text-sm text-slate-400">/100</span>
-            </p>
+            <div className="mt-3 flex items-end gap-2">
+              <p className="text-5xl font-black leading-none tracking-[-0.04em] sm:text-6xl">
+                {average}
+              </p>
+              <span className="pb-1 text-sm font-bold text-slate-400 sm:pb-2">
+                /100
+              </span>
+            </div>
           </div>
         </header>
 
@@ -90,7 +95,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
         </section>
 
         <Section title="한 줄 총평">
-          <p className="text-lg font-bold leading-8 text-slate-800">
+          <p className="break-keep text-lg font-bold leading-8 text-slate-800">
             {result.overallComment}
           </p>
         </Section>
@@ -110,13 +115,13 @@ export default async function ReportPage({ params }: ReportPageProps) {
                 <p className="text-sm font-black text-blue-600">
                   {String(index + 1).padStart(2, "0")}
                 </p>
-                <h3 className="mt-2 font-black text-slate-950">
+                <h3 className="mt-2 break-keep font-black text-slate-950">
                   {priority.title}
                 </h3>
-                <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                <p className="mt-2 break-keep text-sm font-semibold leading-6 text-slate-600">
                   이유: {priority.reason}
                 </p>
-                <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm font-bold leading-6 text-blue-700">
+                <p className="mt-3 break-keep rounded-xl bg-white px-4 py-3 text-sm font-bold leading-6 text-blue-700">
                   예시: {priority.action}
                 </p>
               </div>
@@ -125,7 +130,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
         </Section>
 
         <Section title="개선된 프로젝트 설명">
-          <p className="whitespace-pre-wrap rounded-2xl bg-blue-50 p-5 text-base font-semibold leading-8 text-slate-700">
+          <p className="whitespace-pre-wrap break-keep rounded-2xl bg-blue-50 p-5 text-base font-semibold leading-8 text-slate-700">
             {result.improvedDescription}
           </p>
         </Section>
@@ -143,10 +148,10 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   <p className="text-xs font-black text-blue-600">
                     Q{index + 1}
                   </p>
-                  <h3 className="mt-2 break-words text-sm font-black leading-6 text-slate-950">
+                  <h3 className="mt-2 break-keep text-sm font-black leading-6 text-slate-950">
                     {question}
                   </h3>
-                  <p className="mt-4 rounded-2xl bg-blue-50 p-4 text-sm font-semibold leading-7 text-slate-700">
+                  <p className="mt-4 break-keep rounded-2xl bg-blue-50 p-4 text-sm font-semibold leading-7 text-slate-700">
                     {answer}
                   </p>
                 </article>
@@ -181,7 +186,7 @@ function Section({
 }) {
   return (
     <section className="border-t border-slate-200 py-8">
-      <h2 className="mb-5 text-xl font-black tracking-[-0.02em] text-slate-950">
+      <h2 className="mb-5 break-keep text-xl font-black tracking-[-0.02em] text-slate-950">
         {title}
       </h2>
       {children}
@@ -195,7 +200,7 @@ function ListSection({ items, title }: { items: string[]; title: string }) {
       <ol className="grid gap-3">
         {items.map((item, index) => (
           <li
-            className="rounded-2xl border border-slate-200 bg-white p-5 text-sm font-semibold leading-7 text-slate-700"
+            className="break-keep rounded-2xl border border-slate-200 bg-white p-5 text-sm font-semibold leading-7 text-slate-700"
             key={`${item}-${index}`}
           >
             <span className="mr-2 font-black text-blue-600">
@@ -222,7 +227,7 @@ function getInterviewAnswer(
 
   return [
     `이 질문에는 ${priority?.title ?? "프로젝트 개선 방향"}을 중심으로 답변하겠습니다.`,
-    `질문의 핵심은 "${question}"이므로, 제가 맡은 역할과 구현 판단 근거를 먼저 설명하겠습니다.`,
+    `질문 의도는 "${question}"이므로, 제가 맡은 역할과 구현 판단 근거를 먼저 설명하겠습니다.`,
     priority?.action
       ? `예시로는 ${priority.action}`
       : "마지막에는 사용한 기술, 문제 해결 과정, 개선 결과를 연결해서 말하겠습니다.",
