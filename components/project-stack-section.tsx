@@ -54,10 +54,10 @@ export function ProjectStackSection() {
     <section className="print-hidden border-b border-slate-200 bg-white">
       <div className="mx-auto grid max-w-[1320px] gap-5 px-4 py-10 min-[380px]:px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <p className="text-xs font-extrabold tracking-[0.14em] text-blue-600">
+          <p className="text-xs font-extrabold tracking-normal text-blue-600">
             TECH STACK
           </p>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-slate-950">
+          <h2 className="mt-2 text-2xl font-black tracking-normal text-slate-950">
             사용 기술
           </h2>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -78,7 +78,7 @@ export function ProjectStackSection() {
         </div>
 
         <div>
-          <p className="text-xs font-extrabold tracking-[0.14em] text-blue-600">
+          <p className="text-xs font-extrabold tracking-normal text-blue-600">
             주요 기능
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

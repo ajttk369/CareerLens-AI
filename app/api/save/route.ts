@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  getSupabaseAdmin,
+  isSupabaseConfigured,
+  withSupabaseTimeout,
+} from "@/lib/supabase";
 import type { SavePayload } from "@/types";
 
 export const runtime = "nodejs";
@@ -33,17 +37,19 @@ export async function POST(request: Request) {
       throw new Error("Supabase 클라이언트를 초기화하지 못했습니다.");
     }
 
-    const { data, error } = await supabase
-      .from("analyses")
-      .insert({
-        role: payload.role,
-        portfolio_url: payload.portfolioUrl || null,
-        input_text: payload.inputText,
-        tech_stack: payload.techStack,
-        result_json: payload.result,
-      })
-      .select("id, created_at")
-      .single();
+    const { data, error } = await withSupabaseTimeout(
+      supabase
+        .from("analyses")
+        .insert({
+          role: payload.role,
+          portfolio_url: payload.portfolioUrl || null,
+          input_text: payload.inputText,
+          tech_stack: payload.techStack,
+          result_json: payload.result,
+        })
+        .select("id, created_at")
+        .single(),
+    );
 
     if (error) {
       throw error;
@@ -61,7 +67,7 @@ export async function POST(request: Request) {
       {
         saved: false,
         message:
-          "분석 결과를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.",
+          "분석 결과를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
       },
       { status: 500 },
     );

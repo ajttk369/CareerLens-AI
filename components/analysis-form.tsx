@@ -63,6 +63,19 @@ const sampleForm: FormState = {
   ],
 };
 
+function isValidHttpUrl(value: string) {
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) return false;
+
+  try {
+    const url = new URL(normalizedValue);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const isClientMockMode = process.env.NEXT_PUBLIC_MOCK_ANALYSIS === "true";
 
 export function AnalysisForm({
@@ -84,9 +97,7 @@ export function AnalysisForm({
     () =>
       [
         form.introText,
-        ...form.projects.map(
-          (project) => `${project.url} ${project.description}`,
-        ),
+        ...form.projects.map((project) => project.description),
       ]
         .join(" ")
         .trim().length,
@@ -102,10 +113,6 @@ export function AnalysisForm({
       .split(/[\n,]/)
       .map((item) => item.trim())
       .filter(Boolean);
-    const hasValidUrl =
-      form.portfolioUrl.trim().length > 0 &&
-      /^https?:\/\//i.test(form.portfolioUrl.trim());
-
     return [
       {
         label: "소개/설명 120자 이상",
@@ -120,8 +127,8 @@ export function AnalysisForm({
         passed: techItems.length >= 3,
       },
       {
-        label: "포트폴리오 URL 입력/형식 확인",
-        passed: hasValidUrl,
+        label: "포트폴리오 URL 형식 확인 (선택)",
+        passed: isValidHttpUrl(form.portfolioUrl),
       },
     ];
   }, [descriptionLength, form.portfolioUrl, form.projects, form.techStack]);
@@ -180,7 +187,6 @@ export function AnalysisForm({
     return [
       "자기소개서 또는 포트폴리오 설명",
       form.introText.trim(),
-      projectBlocks.length ? "\n대표 프로젝트" : "",
       ...projectBlocks,
     ]
       .filter(Boolean)
@@ -194,12 +200,12 @@ export function AnalysisForm({
     const inputText = buildInputText();
 
     if (inputText.length < 80) {
-      setFormError("분석 정확도를 위해 설명을 80자 이상 입력해주세요.");
+      setFormError("분석 정확도를 위해 설명을 80자 이상 입력해 주세요.");
       return;
     }
 
     if (!form.techStack.trim()) {
-      setFormError("주요 기술 스택을 입력해주세요.");
+      setFormError("주요 기술 스택을 입력해 주세요.");
       return;
     }
 
@@ -232,7 +238,7 @@ export function AnalysisForm({
             <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
               <BriefcaseBusiness className="size-5" />
             </div>
-            <p className="text-[13px] font-extrabold tracking-[0.12em] text-blue-600">
+            <p className="text-[13px] font-extrabold tracking-normal text-blue-600">
               ANALYSIS INPUT
             </p>
           </div>
@@ -246,7 +252,7 @@ export function AnalysisForm({
             </button>
           ) : null}
         </div>
-        <h2 className="mt-4 w-full whitespace-normal break-words text-[22px] font-black leading-7 tracking-[-0.025em] text-slate-950">
+        <h2 className="mt-4 w-full whitespace-normal text-[22px] font-black leading-7 tracking-normal text-slate-950">
           분석할 정보를 입력하세요
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -300,6 +306,9 @@ export function AnalysisForm({
             type="url"
             value={form.portfolioUrl}
           />
+          <p className="text-xs font-semibold leading-5 text-slate-400">
+            URL은 참고 정보로만 사용하며, 분석은 아래에 입력한 설명을 기준으로 진행합니다.
+          </p>
         </Field>
 
         <Field
@@ -320,7 +329,7 @@ export function AnalysisForm({
           />
           <HelpExample
             title="좋은 프로젝트 설명 예시 보기"
-            text="Riot API를 활용해 League of Legends와 TFT 전적을 조회하는 웹서비스를 제작했습니다. Riot ID 검색, 최근 경기 카드 UI, 랭크 정보 표시, TFT 탭 분리, 반응형 화면을 구현했으며, API 키는 서버 환경변수로 관리했습니다."
+            text="Riot API를 활용해 League of Legends와 TFT 전적을 조회하는 웹 서비스를 제작했습니다. Riot ID 검색, 최근 경기 카드 UI, 랭크 정보 표시, TFT 탭 분리, 반응형 화면을 구현했으며, API 키는 서버 환경변수로 관리했습니다."
           />
         </Field>
 
@@ -502,7 +511,7 @@ function InputQuality({
     <section className="mb-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[13px] font-extrabold tracking-[0.1em] text-blue-600">
+          <p className="text-[13px] font-extrabold tracking-normal text-blue-600">
             INPUT QUALITY
           </p>
           <h3 className="mt-1 text-sm font-black text-slate-950">
@@ -529,7 +538,7 @@ function InputQuality({
                   check.passed ? "text-emerald-500" : "text-amber-500"
                 }`}
               />
-              <span className="break-words leading-5">{check.label}</span>
+              <span className="min-w-0 leading-5">{check.label}</span>
             </div>
           );
         })}
@@ -556,10 +565,10 @@ function CollapsedInputPanel({
           <BriefcaseBusiness className="size-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-extrabold tracking-[0.14em] text-blue-600">
+          <p className="text-xs font-extrabold tracking-normal text-blue-600">
             INPUT SUMMARY
           </p>
-          <h2 className="mt-1 text-lg font-black tracking-[-0.02em] text-slate-950">
+          <h2 className="mt-1 text-lg font-black tracking-normal text-slate-950">
             입력 정보 요약
           </h2>
         </div>
@@ -612,7 +621,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3.5">
       <dt className="text-xs font-extrabold text-slate-500">{label}</dt>
-      <dd className="mt-1 break-words text-sm font-bold leading-6 text-slate-800">
+      <dd className="mt-1 text-sm font-bold leading-6 text-slate-800 [overflow-wrap:anywhere]">
         {value}
       </dd>
     </div>
@@ -653,10 +662,10 @@ function ProjectCard({
         type="button"
       >
         <div className="min-w-0">
-          <p className="text-xs font-extrabold tracking-[0.08em] text-slate-500">
+          <p className="text-xs font-extrabold tracking-normal text-slate-500">
             PROJECT {index + 1}
           </p>
-          <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-700">
+          <p className="mt-1 text-sm font-semibold leading-6 text-slate-700 [overflow-wrap:anywhere]">
             {summary}
           </p>
         </div>

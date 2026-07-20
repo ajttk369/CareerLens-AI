@@ -7,7 +7,7 @@ export function SiteHeader() {
         <a className="flex min-w-0 items-center gap-2 min-[380px]:gap-3" href="#top">
           <BrandMark />
           <div className="min-w-0 leading-[1.18]">
-            <p className="whitespace-nowrap text-base font-black tracking-[-0.01em] text-slate-950">
+            <p className="whitespace-nowrap text-base font-black tracking-normal text-slate-950">
               CareerLens AI
             </p>
             <p className="mt-0.5 whitespace-nowrap text-xs font-semibold text-slate-500 max-[360px]:hidden">

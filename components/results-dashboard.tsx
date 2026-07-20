@@ -24,6 +24,7 @@ import type { AnalysisInput, AnalysisResult } from "@/types";
 type ResultsDashboardProps = {
   input: AnalysisInput;
   isDemoResult: boolean;
+  onEditInput: () => void;
   result: AnalysisResult;
   storageEnabled: boolean;
 };
@@ -64,6 +65,7 @@ const scoreCards = [
 export function ResultsDashboard({
   input,
   isDemoResult,
+  onEditInput,
   result,
   storageEnabled,
 }: ResultsDashboardProps) {
@@ -104,13 +106,19 @@ export function ResultsDashboard({
       setCopyMessage("");
       window.setTimeout(() => setCopiedTarget(""), 1800);
     } catch {
-      setCopyMessage("복사에 실패했습니다. 브라우저 권한을 확인해주세요.");
+      setCopyMessage("복사에 실패했습니다. 브라우저 권한을 확인해 주세요.");
       window.setTimeout(() => setCopyMessage(""), 2200);
     }
   }
 
   async function saveAnalysis() {
-    if (!storageEnabled || saveStatus === "saving") return;
+    if (
+      !storageEnabled ||
+      saveStatus === "saving" ||
+      saveStatus === "saved"
+    ) {
+      return;
+    }
 
     setSaveStatus("saving");
     setSaveMessage("");
@@ -134,6 +142,7 @@ export function ResultsDashboard({
       setSaveStatus("saved");
       setSavedAnalysisId(data.id ?? "");
       setSaveMessage("분석 결과가 저장되었습니다.");
+      window.dispatchEvent(new Event("analysis-saved"));
     } catch (error) {
       setSaveStatus("error");
       setSaveMessage(
@@ -194,7 +203,7 @@ export function ResultsDashboard({
   return (
     <section className="print-report scroll-mt-24" id="results">
       <div className="hidden print:block">
-        <p className="text-sm font-extrabold tracking-[0.14em] text-blue-700">
+        <p className="text-sm font-extrabold tracking-normal text-blue-700">
           CareerLens AI
         </p>
         <h1 className="mt-2 text-3xl font-black text-slate-950">
@@ -204,7 +213,7 @@ export function ResultsDashboard({
       <div className="mb-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[13px] font-extrabold tracking-[0.12em] text-blue-600">
+            <p className="text-[13px] font-extrabold tracking-normal text-blue-600">
               CAREER REVIEW RESULT
             </p>
             {isDemoResult ? (
@@ -213,11 +222,11 @@ export function ResultsDashboard({
               </span>
             ) : null}
           </div>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.035em] text-slate-950 sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-black tracking-normal text-slate-950 sm:text-3xl">
             {input.role} 지원 분석 결과
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            핵심 요약을 먼저 확인하고, 필요한 세부 항목만 펼쳐보세요.
+            핵심 요약을 먼저 확인하고 필요한 세부 항목만 펼쳐 확인하세요.
           </p>
         </div>
 
@@ -248,23 +257,27 @@ export function ResultsDashboard({
               {copiedTarget === "share-link" ? "복사 완료" : "공유 링크"}
             </button>
           ) : null}
-          <a
+          <button
             className="inline-flex min-h-11 min-w-[112px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 max-sm:w-full"
-            href="#analyze"
+            onClick={() => {
+              onEditInput();
+              document.getElementById("analyze")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }}
+            type="button"
           >
             <RefreshCw className="size-4" />
             입력 수정
-          </a>
-          <a
-            className="inline-flex min-h-11 min-w-[118px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 max-sm:w-full"
-            href="#analyze"
-          >
-            <RefreshCw className="size-4" />
-            다시 분석하기
-          </a>
+          </button>
           <button
             className="inline-flex min-h-11 min-w-[120px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 max-sm:w-full"
-            disabled={!storageEnabled || saveStatus === "saving"}
+            disabled={
+              !storageEnabled ||
+              saveStatus === "saving" ||
+              saveStatus === "saved"
+            }
             onClick={saveAnalysis}
             title={!storageEnabled ? "저장 기능 준비 중" : undefined}
             type="button"
@@ -328,11 +341,11 @@ export function ResultsDashboard({
       <article className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-lg shadow-slate-200/70">
         <div className="grid gap-0 lg:grid-cols-[260px_1fr]">
           <div className="bg-slate-950 p-6 text-white sm:p-8">
-            <p className="text-sm font-extrabold tracking-[0.1em] text-blue-300">
+            <p className="text-sm font-extrabold tracking-normal text-blue-300">
               TOTAL SCORE
             </p>
             <div className="mt-5 flex items-end gap-2">
-              <p className="text-6xl font-black tracking-[-0.04em] min-[380px]:text-7xl lg:tracking-[-0.07em]">
+              <p className="text-6xl font-black tracking-normal min-[380px]:text-7xl">
                 {average}
               </p>
               <span className="pb-3 text-sm font-bold text-slate-400">
@@ -350,10 +363,10 @@ export function ResultsDashboard({
           </div>
 
           <div className="p-5 min-[380px]:p-6 sm:p-8">
-            <p className="text-[13px] font-extrabold tracking-[0.1em] text-blue-600">
+            <p className="text-[13px] font-extrabold tracking-normal text-blue-600">
               SUMMARY
             </p>
-            <h3 className="mt-3 break-words text-2xl font-black leading-snug tracking-[-0.025em] text-slate-950">
+            <h3 className="mt-3 text-2xl font-black leading-snug tracking-normal text-slate-950">
               {summary.headline}
             </h3>
 
@@ -424,10 +437,10 @@ export function ResultsDashboard({
       <article className="mt-4 rounded-3xl border border-blue-200 bg-blue-50 p-6 sm:p-7">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <p className="text-[13px] font-extrabold tracking-[0.1em] text-blue-700">
+            <p className="text-[13px] font-extrabold tracking-normal text-blue-700">
               REWRITTEN DESCRIPTION
             </p>
-            <h3 className="mt-1 text-xl font-black tracking-[-0.03em] text-slate-950">
+            <h3 className="mt-1 text-xl font-black tracking-normal text-slate-950">
               프로젝트 설명 개선 문구
             </h3>
           </div>
@@ -471,7 +484,7 @@ export function ResultsDashboard({
                   </p>
                 </div>
                 <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                  <p className="text-xs font-extrabold tracking-[0.1em] text-blue-700">
+                  <p className="text-xs font-extrabold tracking-normal text-blue-700">
                     ANSWER EXAMPLE
                   </p>
                   <p className="mt-2 break-words text-sm font-semibold leading-7 text-slate-700">
@@ -563,11 +576,11 @@ function SnapshotCard({
 }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
-      <p className="text-xs font-extrabold tracking-[0.1em] text-slate-500">
+      <p className="text-xs font-extrabold tracking-normal text-slate-500">
         {label}
       </p>
       <div className="mt-2 flex items-end justify-between gap-3">
-        <p className="text-2xl font-black tracking-[-0.04em] text-slate-950">
+        <p className="text-2xl font-black tracking-normal text-slate-950">
           {value}
         </p>
         {helper ? (
@@ -583,7 +596,7 @@ function SnapshotCard({
 function MiniList({ items, title }: { items: string[]; title: string }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-5">
-      <p className="text-xs font-extrabold tracking-[0.08em] text-slate-500">
+      <p className="text-xs font-extrabold tracking-normal text-slate-500">
         {title}
       </p>
       <ul className="mt-3 grid gap-2.5">
@@ -625,7 +638,7 @@ function HighlightCard({
         >
           <Icon className="size-4.5" />
         </div>
-        <h3 className="font-black tracking-[-0.02em] text-slate-950">
+        <h3 className="font-black tracking-normal text-slate-950">
           {title}
         </h3>
       </div>
@@ -653,10 +666,10 @@ function PriorityPreview({
 }) {
   return (
     <article className="rounded-3xl border border-blue-100 bg-blue-50 p-5 sm:p-6">
-      <p className="text-xs font-extrabold tracking-[0.12em] text-blue-700">
+      <p className="text-xs font-extrabold tracking-normal text-blue-700">
         TOP PRIORITY
       </p>
-      <h3 className="mt-1 font-black tracking-[-0.02em] text-slate-950">
+      <h3 className="mt-1 font-black tracking-normal text-slate-950">
         개선 우선순위 TOP 3
       </h3>
       <ol className="mt-5 grid gap-3">
@@ -698,7 +711,7 @@ function DetailsSection({
       open={defaultOpen}
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-        <h3 className="text-xl font-black tracking-[-0.025em] text-slate-950">
+        <h3 className="text-xl font-black tracking-normal text-slate-950">
           {title}
         </h3>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition group-open:rotate-180">

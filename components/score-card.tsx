@@ -69,7 +69,7 @@ export function ScoreCard({
         ) : null}
       </div>
       <div className="mt-1 flex items-end gap-1">
-        <p className="text-3xl font-black tracking-[-0.04em] text-slate-950">
+        <p className="text-3xl font-black tracking-normal text-slate-950">
           {score}
         </p>
         <span className="pb-1 text-[13px] font-bold text-slate-400">/100</span>

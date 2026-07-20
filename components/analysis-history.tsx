@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  Check,
   ExternalLink,
   History,
   LoaderCircle,
@@ -33,12 +32,15 @@ export function AnalysisHistory() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState("");
-  const [deletedId, setDeletedId] = useState("");
 
   useEffect(() => {
     let ignore = false;
 
     async function loadHistory() {
+      if (!ignore) {
+        setIsLoading(true);
+      }
+
       try {
         const response = await fetch("/api/history");
         const data = (await response.json()) as HistoryResponse;
@@ -60,9 +62,11 @@ export function AnalysisHistory() {
     }
 
     loadHistory();
+    window.addEventListener("analysis-saved", loadHistory);
 
     return () => {
       ignore = true;
+      window.removeEventListener("analysis-saved", loadHistory);
     };
   }, []);
 
@@ -90,8 +94,6 @@ export function AnalysisHistory() {
       }
 
       setItems((current) => current.filter((item) => item.id !== id));
-      setDeletedId(id);
-      window.setTimeout(() => setDeletedId(""), 1600);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -109,10 +111,10 @@ export function AnalysisHistory() {
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 min-[380px]:p-6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-xs font-extrabold tracking-[0.14em] text-blue-600">
+              <p className="text-xs font-extrabold tracking-normal text-blue-600">
                 ANALYSIS HISTORY
               </p>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-slate-950">
+              <h2 className="mt-2 text-2xl font-black tracking-normal text-slate-950">
                 저장된 분석 결과
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -181,8 +183,6 @@ export function AnalysisHistory() {
                       >
                         {deletingId === item.id ? (
                           <LoaderCircle className="size-3.5 animate-spin" />
-                        ) : deletedId === item.id ? (
-                          <Check className="size-3.5" />
                         ) : (
                           <Trash2 className="size-3.5" />
                         )}

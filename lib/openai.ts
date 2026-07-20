@@ -84,7 +84,11 @@ function getOpenAIClient() {
     throw new Error("OPENAI_API_KEY가 설정되지 않았습니다.");
   }
 
-  return new OpenAI({ apiKey });
+  return new OpenAI({
+    apiKey,
+    maxRetries: 1,
+    timeout: 90_000,
+  });
 }
 
 export async function analyzePortfolio(

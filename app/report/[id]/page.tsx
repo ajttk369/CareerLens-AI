@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/brand-mark";
-import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  getSupabaseAdmin,
+  isSupabaseConfigured,
+  withSupabaseTimeout,
+} from "@/lib/supabase";
 import type { AnalysisResult } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -33,11 +37,15 @@ export default async function ReportPage({ params }: ReportPageProps) {
     notFound();
   }
 
-  const { data, error } = await supabase
-    .from("analyses")
-    .select("id, role, portfolio_url, input_text, tech_stack, result_json, created_at")
-    .eq("id", id)
-    .single();
+  const { data, error } = await withSupabaseTimeout(
+    supabase
+      .from("analyses")
+      .select(
+        "id, role, portfolio_url, input_text, tech_stack, result_json, created_at",
+      )
+      .eq("id", id)
+      .single(),
+  ).catch(() => ({ data: null, error: true }));
 
   if (error || !data) {
     notFound();
@@ -66,7 +74,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
                 </p>
               </div>
             </div>
-            <h1 className="mt-8 break-keep text-3xl font-black leading-tight tracking-[-0.04em] text-slate-950 sm:text-4xl">
+            <h1 className="mt-8 break-keep text-3xl font-black leading-tight tracking-normal text-slate-950 sm:text-4xl">
               {report.role} 지원 분석 리포트
             </h1>
             <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
@@ -75,11 +83,11 @@ export default async function ReportPage({ params }: ReportPageProps) {
           </div>
 
           <div className="w-full rounded-3xl bg-slate-950 p-6 text-white sm:w-auto sm:min-w-[180px]">
-            <p className="text-sm font-extrabold tracking-[0.1em] text-blue-300">
+            <p className="text-sm font-extrabold tracking-normal text-blue-300">
               TOTAL SCORE
             </p>
             <div className="mt-3 flex items-end gap-2">
-              <p className="text-5xl font-black leading-none tracking-[-0.04em] sm:text-6xl">
+              <p className="text-5xl font-black leading-none tracking-normal sm:text-6xl">
                 {average}
               </p>
               <span className="pb-1 text-sm font-bold text-slate-400 sm:pb-2">
@@ -167,7 +175,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
 function InfoCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-      <p className="text-xs font-extrabold tracking-[0.12em] text-blue-600">
+      <p className="text-xs font-extrabold tracking-normal text-blue-600">
         {title}
       </p>
       <p className="mt-2 break-words text-sm font-bold leading-6 text-slate-700">
@@ -186,7 +194,7 @@ function Section({
 }) {
   return (
     <section className="border-t border-slate-200 py-8">
-      <h2 className="mb-5 break-keep text-xl font-black tracking-[-0.02em] text-slate-950">
+      <h2 className="mb-5 break-keep text-xl font-black tracking-normal text-slate-950">
         {title}
       </h2>
       {children}

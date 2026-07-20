@@ -20,6 +20,7 @@ export function CareerReviewApp() {
   const [storageEnabled, setStorageEnabled] = useState(false);
   const [isInputCollapsed, setIsInputCollapsed] = useState(false);
   const [isDemoResult, setIsDemoResult] = useState(false);
+  const [analysisVersion, setAnalysisVersion] = useState(0);
   const resultRef = useRef<HTMLDivElement>(null);
 
   async function handleAnalyze(input: AnalysisInput) {
@@ -39,12 +40,13 @@ export function CareerReviewApp() {
 
       if (!response.ok || !data.result) {
         throw new Error(
-          data.error || "분석 결과를 불러오지 못했습니다. 다시 시도해주세요.",
+          data.error || "분석 결과를 불러오지 못했습니다. 다시 시도해 주세요.",
         );
       }
 
       setSubmittedInput(input);
       setResult(data.result);
+      setAnalysisVersion((current) => current + 1);
       setStorageEnabled(data.storageEnabled);
       setIsInputCollapsed(true);
 
@@ -69,6 +71,7 @@ export function CareerReviewApp() {
     setError("");
     setSubmittedInput(demoInput);
     setResult(getMockAnalysisResult());
+    setAnalysisVersion((current) => current + 1);
     setStorageEnabled(false);
     setIsDemoResult(true);
     setIsInputCollapsed(true);
@@ -108,6 +111,8 @@ export function CareerReviewApp() {
               <ResultsDashboard
                 input={submittedInput}
                 isDemoResult={isDemoResult}
+                key={analysisVersion}
+                onEditInput={() => setIsInputCollapsed(false)}
                 result={result}
                 storageEnabled={storageEnabled}
               />
@@ -127,8 +132,8 @@ function ErrorCard({ message }: { message: string }) {
       <p className="text-sm font-black">분석을 완료하지 못했습니다</p>
       <p className="mt-2 text-sm leading-6">{message}</p>
       <ul className="mt-4 grid gap-1.5 text-xs font-semibold leading-5 text-red-700">
-        <li>OPENAI_API_KEY가 설정되지 않았다면 .env.local을 확인해주세요.</li>
-        <li>API 사용량 또는 결제 한도에 도달했는지 확인해주세요.</li>
+        <li>OPENAI_API_KEY가 설정되지 않았다면 .env.local을 확인해 주세요.</li>
+        <li>OpenAI API 연결 상태와 사용량 또는 결제 한도를 확인해 주세요.</li>
         <li>잠시 후 다시 시도하거나 데모 결과 보기로 화면을 확인할 수 있습니다.</li>
       </ul>
     </div>
@@ -142,7 +147,7 @@ function EmptyResults() {
         <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-blue-50 text-2xl font-black text-blue-600">
           01
         </div>
-        <h2 className="mt-6 text-2xl font-black tracking-[-0.04em] text-slate-950">
+        <h2 className="mt-6 text-2xl font-black tracking-normal text-slate-950">
           분석 결과가 여기에 표시됩니다
         </h2>
         <p className="mt-3 text-sm leading-7 text-slate-500">

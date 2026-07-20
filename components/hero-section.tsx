@@ -15,8 +15,8 @@ const highlights = [
   },
   {
     icon: ClipboardList,
-    title: "포트폴리오·자기소개서 동시 리뷰",
-    text: "URL과 설명을 함께 보고 핵심 메시지를 정리합니다.",
+    title: "입력 내용 통합 리뷰",
+    text: "직접 입력한 소개와 프로젝트 설명을 함께 분석합니다.",
   },
   {
     icon: MessageSquareText,
@@ -39,10 +39,11 @@ export function HeroSection() {
             <Sparkles className="size-3.5" />
             PORTFOLIO REVIEW
           </div>
-          <h1 className="max-w-3xl text-[2.05rem] font-black leading-[1.14] tracking-[-0.02em] text-slate-950 min-[380px]:text-[2.35rem] sm:text-5xl lg:text-[3.75rem] lg:tracking-[-0.035em]">
-            지원 내용을 한눈에 정리하는
-            <br />
-            <span className="text-blue-600">포트폴리오 분석 도구</span>
+          <h1 className="max-w-3xl text-[2.05rem] font-black leading-[1.14] tracking-normal text-slate-950 min-[380px]:text-[2.35rem] sm:text-5xl lg:text-[3.75rem]">
+            <span className="block break-keep">채용자의 시선으로</span>
+            <span className="block break-keep text-blue-600">
+              포트폴리오를 분석합니다
+            </span>
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
             CareerLens AI는 포트폴리오와 자기소개서를 바탕으로 총점, 강점,
@@ -87,7 +88,7 @@ export function HeroSection() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/70 sm:p-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <p className="text-[13px] font-extrabold tracking-[0.12em] text-blue-600">
+                <p className="text-[13px] font-extrabold tracking-normal text-blue-600">
                   LIVE PREVIEW
                 </p>
                 <p className="mt-1 font-extrabold text-slate-950">
@@ -101,7 +102,7 @@ export function HeroSection() {
 
             <div className="mt-4 rounded-3xl bg-slate-950 p-6 text-white">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-extrabold tracking-[0.1em] text-blue-300">
+                <p className="text-sm font-extrabold tracking-normal text-blue-300">
                   TOTAL SCORE
                 </p>
                 <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-extrabold text-emerald-200">
@@ -109,7 +110,7 @@ export function HeroSection() {
                 </span>
               </div>
               <div className="mt-5 flex items-end gap-2">
-                <p className="text-6xl font-black tracking-[-0.07em]">84</p>
+                <p className="text-6xl font-black tracking-normal">84</p>
                 <span className="pb-2 text-sm font-bold text-slate-400">
                   /100
                 </span>
@@ -133,7 +134,7 @@ export function HeroSection() {
                   <p className="text-[13px] font-extrabold text-slate-500">
                     {label}
                   </p>
-                  <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">
+                  <p className="mt-2 text-2xl font-black tracking-normal text-slate-950">
                     {score}
                   </p>
                 </div>
@@ -142,7 +143,7 @@ export function HeroSection() {
 
             <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-5 shadow-sm shadow-blue-100/60">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[13px] font-extrabold tracking-[0.1em] text-blue-700">
+                <p className="text-[13px] font-extrabold tracking-normal text-blue-700">
                   TOP PRIORITY
                 </p>
                 <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-blue-700">

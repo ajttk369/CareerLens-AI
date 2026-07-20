@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  getSupabaseAdmin,
+  isSupabaseConfigured,
+  withSupabaseTimeout,
+} from "@/lib/supabase";
 import type { AnalysisResult } from "@/types";
 
 export const runtime = "nodejs";
@@ -29,11 +33,13 @@ export async function GET() {
       throw new Error("Supabase 클라이언트를 초기화하지 못했습니다.");
     }
 
-    const { data, error } = await supabase
-      .from("analyses")
-      .select("id, role, portfolio_url, tech_stack, result_json, created_at")
-      .order("created_at", { ascending: false })
-      .limit(6);
+    const { data, error } = await withSupabaseTimeout(
+      supabase
+        .from("analyses")
+        .select("id, role, portfolio_url, tech_stack, result_json, created_at")
+        .order("created_at", { ascending: false })
+        .limit(6),
+    );
 
     if (error) {
       throw error;
@@ -99,7 +105,9 @@ export async function DELETE(request: Request) {
       throw new Error("Supabase 클라이언트를 초기화하지 못했습니다.");
     }
 
-    const { error } = await supabase.from("analyses").delete().eq("id", id);
+    const { error } = await withSupabaseTimeout(
+      supabase.from("analyses").delete().eq("id", id),
+    );
 
     if (error) {
       throw error;
