@@ -1,216 +1,54 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
+import { ExternalLink, History, LoaderCircle, Trash2 } from "lucide-react";
+import { initializeHistory, requestJson } from "@/lib/client-api";
 
-import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import {
-  ExternalLink,
-  History,
-  LoaderCircle,
-  ServerOff,
-  Trash2,
-} from "lucide-react";
-
-type HistoryItem = {
-  id: string;
-  role: string;
-  portfolioUrl: string | null;
-  techStack: string;
-  score: number;
-  summary: string;
-  createdAt: string;
-};
-
-type HistoryResponse = {
-  enabled: boolean;
-  items: HistoryItem[];
-  message?: string;
-};
-
+type Item = { id: string; role: string; techStack: string; score: number | null; summary: string; completed: number; shared: boolean; createdAt: string };
+type HistoryResponse = { enabled: boolean; items: Item[]; message?: string };
 export function AnalysisHistory() {
-  const [items, setItems] = useState<HistoryItem[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [enabled, setEnabled] = useState(true);
   const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState("");
-
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState("");
+  const sequence = useRef(0);
   useEffect(() => {
-    let ignore = false;
-
-    async function loadHistory() {
-      if (!ignore) {
-        setIsLoading(true);
-      }
-
+    let mounted = true;
+    async function load() {
+      const version = ++sequence.current;
+      setLoading(true);
       try {
-        const response = await fetch("/api/history");
-        const data = (await response.json()) as HistoryResponse;
-
-        if (ignore) return;
-
-        setEnabled(data.enabled);
-        setItems(data.items ?? []);
-        setMessage(data.message ?? "");
-      } catch {
-        if (!ignore) {
-          setMessage("히스토리를 불러오지 못했습니다.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
+        await initializeHistory<HistoryResponse>();
+        const data = await requestJson<HistoryResponse>("/api/history");
+        if (!mounted || version !== sequence.current) return;
+        setItems(data.items ?? []); setEnabled(data.enabled); setMessage(data.message ?? "");
+      } catch (failure) { if (mounted && version === sequence.current) setMessage(failure instanceof Error ? failure.message : "기록을 불러오지 못했습니다."); }
+      finally { if (mounted && version === sequence.current) setLoading(false); }
     }
-
-    loadHistory();
-    window.addEventListener("analysis-saved", loadHistory);
-
-    return () => {
-      ignore = true;
-      window.removeEventListener("analysis-saved", loadHistory);
-    };
+    void load();
+    window.addEventListener("analysis-saved", load);
+    window.addEventListener("careerlens-history-refresh", load);
+    return () => { mounted = false; sequence.current += 1; window.removeEventListener("analysis-saved", load); window.removeEventListener("careerlens-history-refresh", load); };
   }, []);
-
-  async function deleteItem(id: string) {
-    if (deletingId) return;
-
-    const ok = window.confirm("저장된 분석 결과를 삭제할까요?");
-
-    if (!ok) return;
-
-    setDeletingId(id);
-    setMessage("");
-
+  async function remove(id: string) {
+    if (deleting || !window.confirm("이 기록과 공유 링크를 영구 삭제할까요? 삭제 후 복구할 수 없습니다.")) return;
+    setDeleting(id); setMessage("");
     try {
-      const response = await fetch(`/api/history?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-      const data = (await response.json()) as {
-        deleted?: boolean;
-        message?: string;
-      };
-
-      if (!response.ok || !data.deleted) {
-        throw new Error(data.message || "삭제하지 못했습니다.");
-      }
-
+      await requestJson("/api/history?id=" + encodeURIComponent(id), { method: "DELETE" });
+      sequence.current += 1;
+      setLoading(false);
       setItems((current) => current.filter((item) => item.id !== id));
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "저장된 분석 결과를 삭제하지 못했습니다.",
-      );
-    } finally {
-      setDeletingId("");
-    }
+    } catch (failure) { setMessage(failure instanceof Error ? failure.message : "삭제하지 못했습니다."); }
+    finally { setDeleting(""); }
   }
-
-  return (
-    <section className="print-hidden bg-slate-50 pb-16">
-      <div className="mx-auto max-w-[1320px] px-4 min-[380px]:px-5 sm:px-8">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 min-[380px]:p-6">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-xs font-extrabold tracking-normal text-blue-600">
-                ANALYSIS HISTORY
-              </p>
-              <h2 className="mt-2 text-2xl font-black tracking-normal text-slate-950">
-                저장된 분석 결과
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                저장된 결과를 다시 열거나 공유용 리포트 링크로 확인할 수
-                있습니다.
-              </p>
-            </div>
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-              <History className="size-5" />
-            </div>
-          </div>
-
-          {enabled && message && !isLoading && items.length > 0 ? (
-            <HistoryNotice message={message} />
-          ) : null}
-
-          {!enabled ? (
-            <HistoryNotice
-              icon={<ServerOff className="size-4" />}
-              message={message || "Supabase 연결 후 히스토리를 사용할 수 있습니다."}
-            />
-          ) : isLoading ? (
-            <HistoryNotice message="히스토리를 불러오는 중입니다." />
-          ) : items.length === 0 ? (
-            <HistoryNotice message={message || "아직 저장된 분석 결과가 없습니다."} />
-          ) : (
-            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {items.map((item) => (
-                <article
-                  className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-blue-200 hover:bg-white hover:shadow-md hover:shadow-slate-200/70"
-                  key={item.id}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-extrabold text-blue-600">
-                        {item.role}
-                      </p>
-                      <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
-                        {new Date(item.createdAt).toLocaleDateString("ko-KR")}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-950 px-3 py-1.5 text-sm font-black text-white">
-                      {item.score}
-                    </span>
-                  </div>
-                  <p className="mt-4 text-sm font-semibold leading-6 text-slate-700">
-                    {item.summary}
-                  </p>
-                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
-                    <p className="break-words text-xs font-bold leading-5 text-slate-400 min-[520px]:truncate">
-                      {item.techStack}
-                    </p>
-                    <div className="grid shrink-0 grid-cols-2 gap-2 min-[520px]:flex min-[520px]:items-center">
-                      <a
-                        className="inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
-                        href={`/report/${item.id}`}
-                      >
-                        <ExternalLink className="size-3.5" />
-                        열기
-                      </a>
-                      <button
-                        className="inline-flex min-h-9 min-w-[72px] items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-rose-100 bg-white px-3 text-xs font-extrabold text-rose-600 transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={Boolean(deletingId)}
-                        onClick={() => deleteItem(item.id)}
-                        type="button"
-                      >
-                        {deletingId === item.id ? (
-                          <LoaderCircle className="size-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-3.5" />
-                        )}
-                        삭제
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function HistoryNotice({
-  icon,
-  message,
-}: {
-  icon?: ReactNode;
-  message: string;
-}) {
-  return (
-    <div className="mt-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500">
-      {icon}
-      {message}
-    </div>
-  );
+  return <section className="history-section section-shell print-hidden" id="history">
+    <div className="section-heading"><div><p className="eyebrow">PRIVATE HISTORY</p><h2>내 리뷰 기록</h2></div><History size={20} /></div>
+    <p className="muted">이 브라우저에 연결된 최근 12개 기록입니다. 다른 기기나 쿠키 삭제 후에는 개인 기록에 접근할 수 없습니다.</p>
+    {message && <p className="notice" role="status">{message}{enabled && <button className="text-button" onClick={() => window.dispatchEvent(new Event("careerlens-history-refresh"))}>다시 불러오기</button>}</p>}
+    {loading ? <p className="history-empty"><LoaderCircle size={16} className="spin" /> 기록을 불러오는 중</p> : !enabled ? <p className="history-empty">저장 기능은 현재 사용할 수 없습니다.</p> : !items.length ? <p className="history-empty">아직 저장한 리뷰가 없습니다.</p> : <div className="history-list">{items.map((item) => <article className="history-item" key={item.id}>
+      <div className="history-score">{item.score ?? "—"}<small>준비도</small></div>
+      <div className="history-description"><div className="history-meta"><strong>{item.role}</strong><span>{new Date(item.createdAt).toLocaleDateString("ko-KR")}</span><span>{item.completed}/5 완료</span><span className={"status-tag " + (item.shared ? "attention" : "good")}>{item.shared ? "공유 중" : "비공개"}</span></div><p>{item.summary}</p><span className="muted">{item.techStack}</span></div>
+      <div className="history-actions"><a className="icon-button" href={"/report/" + item.id} aria-label={item.role + " 개인 리포트 열기"} title="개인 리포트 열기"><ExternalLink size={17} /></a><button className="icon-button danger" disabled={Boolean(deleting)} onClick={() => remove(item.id)} aria-label={item.role + " 기록 삭제"} title="기록 삭제">{deleting === item.id ? <LoaderCircle className="spin" size={17} /> : <Trash2 size={17} />}</button></div>
+    </article>)}</div>}
+  </section>;
 }

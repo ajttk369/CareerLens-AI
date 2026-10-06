@@ -1,111 +1,23 @@
-import { NextResponse } from "next/server";
-import { getMockAnalysisResult, isMockAnalysisEnabled } from "@/lib/mock-analysis";
 import { analyzePortfolio } from "@/lib/openai";
+import { demoInput, getMockAnalysisResult, isMockAnalysisEnabled } from "@/lib/mock-analysis";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { JOB_ROLES, type AnalysisInput } from "@/types";
+import { analysisLimits, issueReceipt, jsonResponse, ownerSession, readJson, requestFailure } from "@/lib/security";
+import { validateInput } from "@/lib/validation";
 
 export const runtime = "nodejs";
-
-class InputError extends Error {}
-
-function isValidHttpUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return (
-      (url.protocol === "http:" || url.protocol === "https:") &&
-      Boolean(url.hostname)
-    );
-  } catch {
-    return false;
-  }
-}
-
-function validateInput(value: unknown): AnalysisInput {
-  if (!value || typeof value !== "object") {
-    throw new InputError("분석할 내용을 입력해 주세요.");
-  }
-
-  const input = value as Partial<AnalysisInput>;
-  const role = typeof input.role === "string" ? input.role.trim() : "";
-  const portfolioUrl =
-    typeof input.portfolioUrl === "string" ? input.portfolioUrl.trim() : "";
-  const inputText =
-    typeof input.inputText === "string" ? input.inputText.trim() : "";
-  const techStack =
-    typeof input.techStack === "string" ? input.techStack.trim() : "";
-
-  if (!JOB_ROLES.includes(role as AnalysisInput["role"])) {
-    throw new InputError("지원 직무를 선택해 주세요.");
-  }
-
-  if (portfolioUrl && !isValidHttpUrl(portfolioUrl)) {
-    throw new InputError(
-      "포트폴리오 URL은 http 또는 https로 시작해야 합니다.",
-    );
-  }
-
-  if (inputText.length < 80) {
-    throw new InputError("분석 정확도를 위해 설명을 80자 이상 입력해 주세요.");
-  }
-
-  if (inputText.length > 12000) {
-    throw new InputError("설명은 12,000자 이하로 입력해 주세요.");
-  }
-
-  if (techStack.length < 2) {
-    throw new InputError("주요 기술 스택을 입력해 주세요.");
-  }
-
-  return {
-    role: role as AnalysisInput["role"],
-    portfolioUrl,
-    inputText,
-    techStack,
-  };
-}
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
+  const deadline = AbortSignal.timeout(50_000);
   try {
-    const body = await request.json();
-    const input = validateInput(body);
-
+    const input = validateInput(await readJson(request, 100_000));
+    const session = await ownerSession(true);
+    if (!session) throw new Error("Session unavailable");
     if (isMockAnalysisEnabled()) {
-      return NextResponse.json({
-        result: getMockAnalysisResult(),
-        storageEnabled: isSupabaseConfigured(),
-      });
+      return jsonResponse({ result: getMockAnalysisResult(), input: validateInput(demoInput), storageEnabled: false, mode: "demo" }, session);
     }
-
-    const result = await analyzePortfolio(input);
-
-    return NextResponse.json({
-      result,
-      storageEnabled: isSupabaseConfigured(),
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "분석 중 알 수 없는 오류가 발생했습니다.";
-
-    const isConfigurationError = message.includes("OPENAI_API_KEY");
-    const isInputError = error instanceof InputError;
-
-    if (!isConfigurationError && !isInputError) {
-      console.error("OpenAI analysis failed", error);
-    }
-
-    return NextResponse.json(
-      {
-        error: isConfigurationError
-          ? "OPENAI_API_KEY가 설정되지 않았습니다. .env.local을 확인해 주세요."
-          : isInputError
-            ? message
-            : "AI 분석 요청을 처리하지 못했습니다. OpenAI API 연결 상태와 사용량 또는 결제 한도를 확인한 뒤 다시 시도해 주세요.",
-      },
-      {
-        status: isConfigurationError ? 503 : isInputError ? 400 : 502,
-      },
-    );
-  }
+    await analysisLimits(session.hash, request);
+    const result = await analyzePortfolio(input, AbortSignal.any([request.signal, deadline]));
+    return jsonResponse({ result, input, storageEnabled: isSupabaseConfigured(), mode: "ai", receipt: issueReceipt(session.hash, input, result) }, session);
+  } catch (error) { return requestFailure(error); }
 }

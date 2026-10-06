@@ -1,827 +1,100 @@
-﻿"use client";
+"use client";
+import { useState } from "react";
+import { Check, Clipboard, ExternalLink, Link2, LoaderCircle, Printer, Save, ShieldCheck, Unlink } from "lucide-react";
+import { DescriptionSection, FindingsSection, InterviewSection, MissingSection, ReportContent, ScoresSection } from "@/components/review-content";
+import { getReviewScore, getReviewText } from "@/lib/review";
+import { requestJson } from "@/lib/client-api";
+import type { AnalyzeResponse } from "@/types";
 
-import { type ReactNode, useMemo, useState } from "react";
-import {
-  BadgeCheck,
-  Check,
-  ChevronDown,
-  Clipboard,
-  ExternalLink,
-  FileQuestion,
-  Gauge,
-  MessageSquareText,
-  Palette,
-  Printer,
-  RefreshCw,
-  Save,
-  Sparkles,
-  Target,
-  TriangleAlert,
-} from "lucide-react";
-import { getScoreStatus, ScoreCard } from "@/components/score-card";
-import type { AnalysisInput, AnalysisResult } from "@/types";
-
-type ResultsDashboardProps = {
-  input: AnalysisInput;
-  isDemoResult: boolean;
-  onEditInput: () => void;
-  result: AnalysisResult;
-  storageEnabled: boolean;
-};
-
-const scoreCards = [
-  {
-    key: "firstImpression" as const,
-    label: "첫인상",
-    icon: Sparkles,
-    description: "채용자가 30초 안에 확인하는 완성도와 정보 구조를 평가합니다.",
-  },
-  {
-    key: "technicalSkill" as const,
-    label: "기술력",
-    icon: Gauge,
-    description: "사용 기술, 구현 난이도, API/DB 활용 여부를 기준으로 평가합니다.",
-  },
-  {
-    key: "communication" as const,
-    label: "전달력",
-    icon: MessageSquareText,
-    description: "프로젝트 목적, 본인 역할, 문제 해결 과정이 명확한지 평가합니다.",
-  },
-  {
-    key: "designQuality" as const,
-    label: "디자인 완성도",
-    icon: Palette,
-    description: "레이아웃, 시각적 위계, 반응형 완성도를 평가합니다.",
-  },
-  {
-    key: "roleFit" as const,
-    label: "직무 적합도",
-    icon: Target,
-    description: "지원 직무와 프로젝트/기술 스택의 연결성을 평가합니다.",
-  },
-];
-
-export function ResultsDashboard({
-  input,
-  isDemoResult,
-  onEditInput,
-  result,
-  storageEnabled,
-}: ResultsDashboardProps) {
-  const [copiedTarget, setCopiedTarget] = useState("");
-  const [copyMessage, setCopyMessage] = useState("");
-  const [checkedPriorities, setCheckedPriorities] = useState<
-    Record<number, boolean>
-  >({});
-  const [savedAnalysisId, setSavedAnalysisId] = useState("");
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  const [saveMessage, setSaveMessage] = useState("");
-
-  const average = Math.round(
-    Object.values(result.scores).reduce((sum, score) => sum + score, 0) / 5,
-  );
-  const status = getScoreStatus(average);
-  const completedPriorityCount = Object.values(checkedPriorities).filter(
-    Boolean,
-  ).length;
-  const targetAverage = Math.min(100, average + 8);
-
-  const summary = useMemo(() => {
-    const sentences = splitSentences(result.overallComment);
-
-    return {
-      headline: sentences[0] || result.overallComment,
-      judgments: sentences.slice(1, 4),
-      actions: result.priorities.slice(0, 2).map((priority) => priority.action),
-    };
-  }, [result]);
-
-  async function copyText(text: string, target: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedTarget(target);
-      setCopyMessage("");
-      window.setTimeout(() => setCopiedTarget(""), 1800);
-    } catch {
-      setCopyMessage("복사에 실패했습니다. 브라우저 권한을 확인해 주세요.");
-      window.setTimeout(() => setCopyMessage(""), 2200);
-    }
+type Tab = "summary" | "description" | "interview";
+export function ResultsDashboard({ response, onEditInput }: { response: AnalyzeResponse; onEditInput: () => void }) {
+  const { input, result, mode, receipt, storageEnabled } = response;
+  const [tab, setTab] = useState<Tab>("summary");
+  const [completed, setCompleted] = useState<number[]>([]);
+  const [savedId, setSavedId] = useState("");
+  const [progressDirty, setProgressDirty] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [copied, setCopied] = useState("");
+  const [fallback, setFallback] = useState("");
+  const score = getReviewScore(result, input.role);
+  async function copy(text: string, target: string) {
+    try { await navigator.clipboard.writeText(text); setCopied(target); setFallback(""); window.setTimeout(() => setCopied(""), 2000); }
+    catch { setFallback(text); setMessage("자동 복사가 제한됐습니다. 아래 텍스트를 선택해 복사할 수 있습니다."); }
   }
-
-  async function saveAnalysis() {
-    if (
-      !storageEnabled ||
-      saveStatus === "saving" ||
-      saveStatus === "saved"
-    ) {
-      return;
-    }
-
-    setSaveStatus("saving");
-    setSaveMessage("");
-
+  async function save() {
+    if (busy || !receipt || mode === "demo" || !storageEnabled) return;
+    setBusy("save"); setMessage("");
     try {
-      const response = await fetch("/api/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...input, result }),
-      });
-      const data = (await response.json()) as {
-        id?: string;
-        saved?: boolean;
-        message?: string;
-      };
-
-      if (!response.ok || !data.saved) {
-        throw new Error(data.message || "저장에 실패했습니다.");
-      }
-
-      setSaveStatus("saved");
-      setSavedAnalysisId(data.id ?? "");
-      setSaveMessage("분석 결과가 저장되었습니다.");
+      const data = await requestJson<{ id: string }>("/api/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input, result, receipt, completedPriorities: completed }) });
+      setSavedId(data.id); setProgressDirty(false); setMessage("이 브라우저의 비공개 기록에 저장했습니다.");
       window.dispatchEvent(new Event("analysis-saved"));
-    } catch (error) {
-      setSaveStatus("error");
-      setSaveMessage(
-        error instanceof Error
-          ? error.message
-          : "분석 결과를 저장하지 못했습니다.",
-      );
-    }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "저장하지 못했습니다."); }
+    finally { setBusy(""); }
   }
-
-  function buildFullCopyText() {
-    return [
-      "CareerLens AI 분석 결과",
-      "",
-      "[종합 점수]",
-      `${average}점`,
-      "",
-      "[한 줄 총평]",
-      summary.headline,
-      "",
-      "[핵심 강점]",
-      "",
-      ...result.strengths.map((item, index) => `${index + 1}. ${item}`),
-      "",
-      "[보완할 점]",
-      "",
-      ...result.weaknesses.map((item, index) => `${index + 1}. ${item}`),
-      "",
-      "[개선 우선순위 TOP 5]",
-      "",
-      ...result.priorities.map(
-        (priority, index) =>
-          `${index + 1}. ${priority.title}\n   이유: ${priority.reason}\n   예시: ${priority.action}`,
-      ),
-      "",
-      "[개선된 프로젝트 설명]",
-      result.improvedDescription,
-      "",
-      "[예상 면접 질문]",
-      "",
-      ...result.interviewQuestions.map(
-        (question, index) =>
-          `${index + 1}. ${question}\n   답변: ${getInterviewAnswer(result, question, index)}`,
-      ),
-    ].join("\n");
+  async function saveProgress() {
+    if (!savedId || busy) return;
+    setBusy("progress"); setMessage("");
+    try {
+      await requestJson("/api/history", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: savedId, completedPriorities: completed }) });
+      setProgressDirty(false); setMessage("진행 상황을 저장했습니다."); window.dispatchEvent(new Event("analysis-saved"));
+    } catch (error) { setMessage(error instanceof Error ? error.message : "진행 상황을 저장하지 못했습니다."); }
+    finally { setBusy(""); }
   }
-
-  function printReport() {
-    window.print();
+  async function share(enabled: boolean) {
+    if (!savedId || busy) return;
+    if (enabled && !window.confirm("리뷰 결과, 입력 근거, 기술 정보가 링크를 가진 사람에게 7일 동안 공개됩니다. 민감정보가 없는지 확인했나요?")) return;
+    setBusy("share"); setMessage("");
+    try {
+      const data = await requestJson<{ path: string | null }>("/api/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: savedId, enabled }) });
+      setShareUrl(data.path ? window.location.origin + data.path : "");
+      setMessage(enabled ? "7일 동안 사용할 수 있는 공유 링크를 만들었습니다." : "공유 링크를 해제했습니다.");
+      window.dispatchEvent(new Event("analysis-saved"));
+    } catch (error) { setMessage(error instanceof Error ? error.message : "공유 설정을 변경하지 못했습니다."); }
+    finally { setBusy(""); }
   }
-
-  function shareUrl() {
-    if (!savedAnalysisId) return "";
-
-    return `${window.location.origin}/report/${savedAnalysisId}`;
+  function toggle(index: number) {
+    setCompleted((current) => current.includes(index) ? current.filter((value) => value !== index) : [...current, index]);
+    if (savedId) setProgressDirty(true);
   }
-
-  return (
-    <section className="print-report scroll-mt-24" id="results">
-      <div className="hidden print:block">
-        <p className="text-sm font-extrabold tracking-normal text-blue-700">
-          CareerLens AI
-        </p>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">
-          AI 포트폴리오 분석 리포트
-        </h1>
+  const tabs: { value: Tab; label: string }[] = [{ value: "summary", label: "요약과 수정 작업" }, { value: "description", label: "문구 개선" }, { value: "interview", label: "면접 준비" }];
+  return <>
+    <div className="dashboard print-hidden">
+      <div className="result-heading"><div><p className="eyebrow">{mode === "demo" ? "가상 샘플 · 실제 AI 분석 아님" : "포트폴리오 설명 리뷰"}</p><h2>{input.role} 리뷰</h2></div><div className="result-toolbar">
+        <button className="icon-button" aria-label="전체 결과 복사" title="전체 결과 복사" onClick={() => copy(getReviewText(result, input.role), "all")}>{copied === "all" ? <Check size={18} /> : <Clipboard size={18} />}</button>
+        <button className="icon-button" aria-label="리포트 인쇄 또는 PDF 저장" title="인쇄 / PDF 저장" onClick={() => window.print()}><Printer size={18} /></button>
+        <button className="button secondary compact" disabled={Boolean(busy) || !storageEnabled || mode === "demo" || Boolean(savedId)} onClick={save}>{busy === "save" ? <LoaderCircle size={16} className="spin" /> : savedId ? <ShieldCheck size={16} /> : <Save size={16} />}{savedId ? "저장됨" : "비공개 저장"}</button>
+        <button className="button secondary compact" onClick={onEditInput}>입력 수정</button>
+      </div></div>
+      <p className="scope-note">입력한 설명만 분석합니다. 실제 웹사이트·코드·디자인 화면과 채용 가능성은 평가하지 않습니다.</p>
+      {mode === "demo" && <p className="notice">가상 프로젝트의 고정 샘플입니다. 저장은 제공하지 않으며, 입력 수정으로 실제 경험을 작성할 수 있습니다.</p>}
+      {mode === "ai" && !storageEnabled && <p className="notice">저장 기능은 현재 사용할 수 없습니다. 결과 복사와 인쇄는 가능합니다.</p>}
+      <div className="review-overview"><div className="overall-score"><span>설명 준비도</span><strong>{score ?? "—"}<small>{score === null ? "정보 부족" : "/100"}</small></strong></div><div className="overall-comment"><p>{result.overallComment}</p><span>{input.experienceLevel} · {input.jobDescription ? "채용 공고 반영" : "일반 직무 기준"} · {completed.length}/5 작업 완료</span></div></div>
+      {savedId && <div className="saved-actions">
+        <a className="button secondary compact" href={"/report/" + savedId}><ExternalLink size={15} /> 개인 리포트</a>
+        {shareUrl ? <><button className="button secondary compact" onClick={() => copy(shareUrl, "link")}><Link2 size={15} />{copied === "link" ? "복사됨" : "공유 링크 복사"}</button><button className="button secondary compact" disabled={Boolean(busy)} onClick={() => share(false)}><Unlink size={15} /> 공유 해제</button></> : <button className="button secondary compact" disabled={Boolean(busy)} onClick={() => share(true)}><Link2 size={15} /> 공유 링크 만들기</button>}
+        <span className="muted">기본 비공개 · 공유 링크 7일 유효</span>
+      </div>}
+      {(message || busy === "share") && <p className="notice" role="status" aria-live="polite">{busy === "share" ? "공유 설정을 변경하고 있습니다." : message}</p>}
+      {fallback && <label className="clipboard-fallback">복사할 텍스트<textarea rows={5} readOnly value={fallback} onFocus={(event) => event.target.select()} /><button className="button secondary compact" onClick={() => setFallback("")}>닫기</button></label>}
+      <div className="result-tabs" role="tablist" aria-label="리뷰 결과">{tabs.map((item) => <button key={item.value} role="tab" id={"tab-" + item.value} aria-selected={tab === item.value} aria-controls={"panel-" + item.value} tabIndex={tab === item.value ? 0 : -1} onClick={() => setTab(item.value)} onKeyDown={(event) => {
+        if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const current = tabs.findIndex((entry) => entry.value === tab);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? 2 : (current + (event.key === "ArrowRight" ? 1 : 2)) % 3;
+        setTab(tabs[next].value); document.getElementById("tab-" + tabs[next].value)?.focus();
+      }}>{item.label}</button>)}</div>
+      <div id="panel-summary" role="tabpanel" aria-labelledby="tab-summary" hidden={tab !== "summary"}>
+        <FindingsSection result={result} />
+        <section className="report-section"><div className="section-heading"><h2>다음 수정 작업</h2><div className="progress-actions"><span className="muted">{completed.length}/5 완료</span>{savedId && <button className="button secondary compact" disabled={Boolean(busy) || !progressDirty} onClick={saveProgress}>{busy === "progress" ? "저장 중" : progressDirty ? "진행 저장" : "진행 저장됨"}</button>}</div></div>
+          <div className="priority-table-wrapper"><table className="priority-table"><thead><tr><th scope="col">완료</th><th scope="col">수정 대상과 이유</th><th scope="col">해야 할 작업</th></tr></thead><tbody>{result.priorities.map((item, index) => <tr key={index} className={completed.includes(index) ? "is-complete" : ""}><td><label className="priority-check"><input type="checkbox" checked={completed.includes(index)} disabled={Boolean(busy)} onChange={() => toggle(index)} aria-label={item.title + " 완료"} /><span>{String(index + 1).padStart(2, "0")}</span></label></td><td><h3>{item.title}</h3><p>{item.reason}</p>{item.evidence ? <details><summary>입력 근거</summary><blockquote>{item.evidence}</blockquote></details> : <span className="missing-tag">추가 사실 필요</span>}</td><td><p className="action-text">{item.action}</p></td></tr>)}</tbody></table></div>
+        </section>
+        <MissingSection result={result} /><ScoresSection result={result} />
       </div>
-      <div className="mb-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[13px] font-extrabold tracking-normal text-blue-600">
-              CAREER REVIEW RESULT
-            </p>
-            {isDemoResult ? (
-              <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-extrabold text-blue-700">
-                데모 결과
-              </span>
-            ) : null}
-          </div>
-          <h2 className="mt-2 text-2xl font-black tracking-normal text-slate-950 sm:text-3xl">
-            {input.role} 지원 분석 결과
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            핵심 요약을 먼저 확인하고 필요한 세부 항목만 펼쳐 확인하세요.
-          </p>
-        </div>
-
-        <div className="print-hidden flex w-full flex-row flex-wrap items-center gap-2.5 lg:w-auto lg:justify-end">
-          <button
-            className="inline-flex min-h-11 min-w-[112px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 max-sm:w-full"
-            onClick={() => copyText(buildFullCopyText(), "full-result")}
-            type="button"
-          >
-            {copiedTarget === "full-result" ? (
-              <Check className="size-4" />
-            ) : (
-              <Clipboard className="size-4" />
-            )}
-            {copiedTarget === "full-result" ? "복사 완료" : "결과 복사"}
-          </button>
-          {savedAnalysisId ? (
-            <button
-              className="inline-flex min-h-11 min-w-[118px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 max-sm:w-full"
-              onClick={() => copyText(shareUrl(), "share-link")}
-              type="button"
-            >
-              {copiedTarget === "share-link" ? (
-                <Check className="size-4" />
-              ) : (
-                <ExternalLink className="size-4" />
-              )}
-              {copiedTarget === "share-link" ? "복사 완료" : "공유 링크"}
-            </button>
-          ) : null}
-          <button
-            className="inline-flex min-h-11 min-w-[112px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 max-sm:w-full"
-            onClick={() => {
-              onEditInput();
-              document.getElementById("analyze")?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
-            }}
-            type="button"
-          >
-            <RefreshCw className="size-4" />
-            입력 수정
-          </button>
-          <button
-            className="inline-flex min-h-11 min-w-[120px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 max-sm:w-full"
-            disabled={
-              !storageEnabled ||
-              saveStatus === "saving" ||
-              saveStatus === "saved"
-            }
-            onClick={saveAnalysis}
-            title={!storageEnabled ? "저장 기능 준비 중" : undefined}
-            type="button"
-          >
-            {saveStatus === "saved" ? (
-              <Check className="size-4" />
-            ) : (
-              <Save className="size-4" />
-            )}
-            {saveStatus === "saving"
-              ? "저장 중"
-              : saveStatus === "saved"
-                ? "저장 완료"
-                : storageEnabled
-                  ? "결과 저장"
-                  : "저장 준비 중"}
-          </button>
-          <button
-            className="inline-flex min-h-11 min-w-[104px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-4 text-sm font-extrabold text-blue-700 transition hover:border-blue-300 hover:bg-white max-sm:w-full"
-            onClick={printReport}
-            type="button"
-          >
-            <Printer className="size-4" />
-            PDF 저장
-          </button>
-        </div>
-      </div>
-
-      {copyMessage ? (
-        <p className="print-hidden mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-          {copyMessage}
-        </p>
-      ) : null}
-
-      {saveMessage ? (
-        <p
-          className={`print-hidden mb-5 rounded-2xl px-4 py-3 text-sm font-semibold ${
-            saveStatus === "error"
-              ? "bg-red-50 text-red-700"
-              : "bg-emerald-50 text-emerald-700"
-          }`}
-        >
-          {saveMessage}
-        </p>
-      ) : null}
-
-      {!storageEnabled ? (
-        <p className="print-hidden mb-5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs leading-5 text-slate-500">
-          Supabase 환경변수가 없어 저장 버튼은 비활성화되어 있습니다. AI 분석과
-          복사 기능은 정상적으로 사용할 수 있습니다.
-        </p>
-      ) : null}
-
-      <ProgressSnapshot
-        completedCount={completedPriorityCount}
-        currentScore={average}
-        totalCount={result.priorities.length}
-        targetScore={targetAverage}
-      />
-
-      <article className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-lg shadow-slate-200/70">
-        <div className="grid gap-0 lg:grid-cols-[260px_1fr]">
-          <div className="bg-slate-950 p-6 text-white sm:p-8">
-            <p className="text-sm font-extrabold tracking-normal text-blue-300">
-              TOTAL SCORE
-            </p>
-            <div className="mt-5 flex items-end gap-2">
-              <p className="text-6xl font-black tracking-normal min-[380px]:text-7xl">
-                {average}
-              </p>
-              <span className="pb-3 text-sm font-bold text-slate-400">
-                /100
-              </span>
-            </div>
-            <span
-              className={`mt-5 inline-flex rounded-full px-3 py-1.5 text-xs font-extrabold ring-1 ${status.badge}`}
-            >
-              {status.label}
-            </span>
-            <p className="mt-5 text-[15px] leading-7 text-slate-300">
-              5개 평가 항목의 평균 점수입니다.
-            </p>
-          </div>
-
-          <div className="p-5 min-[380px]:p-6 sm:p-8">
-            <p className="text-[13px] font-extrabold tracking-normal text-blue-600">
-              SUMMARY
-            </p>
-            <h3 className="mt-3 text-2xl font-black leading-snug tracking-normal text-slate-950">
-              {summary.headline}
-            </h3>
-
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <MiniList
-                items={
-                  summary.judgments.length
-                    ? summary.judgments
-                    : result.strengths.slice(0, 3)
-                }
-                title="핵심 판단"
-              />
-              <MiniList items={summary.actions} title="바로 실행할 것" />
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <HighlightCard
-          items={result.strengths.slice(0, 3)}
-          tone="blue"
-          title="핵심 강점 3개"
-        />
-        <HighlightCard
-          items={result.weaknesses.slice(0, 3)}
-          tone="amber"
-          title="가장 중요한 개선점 3개"
-        />
-        <PriorityPreview priorities={result.priorities.slice(0, 3)} />
-      </div>
-
-      <DetailsSection title="세부 점수 카드" defaultOpen>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {scoreCards.map((card) => (
-            <ScoreCard
-              icon={card.icon}
-              key={card.key}
-              label={card.label}
-              score={result.scores[card.key]}
-              description={card.description}
-            />
-          ))}
-        </div>
-      </DetailsSection>
-
-      <DetailsSection title="개선 우선순위 TOP 5" defaultOpen>
-        <div className="grid gap-3">
-          {result.priorities.map((priority, index) => (
-            <ActionCard
-              action={priority.action}
-              checked={Boolean(checkedPriorities[index])}
-              index={index}
-              key={`${priority.title}-${index}`}
-              onToggle={() =>
-                setCheckedPriorities((current) => ({
-                  ...current,
-                  [index]: !current[index],
-                }))
-              }
-              reason={priority.reason}
-              title={priority.title}
-            />
-          ))}
-        </div>
-      </DetailsSection>
-
-      <article className="mt-4 rounded-3xl border border-blue-200 bg-blue-50 p-6 sm:p-7">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <p className="text-[13px] font-extrabold tracking-normal text-blue-700">
-              REWRITTEN DESCRIPTION
-            </p>
-            <h3 className="mt-1 text-xl font-black tracking-normal text-slate-950">
-              프로젝트 설명 개선 문구
-            </h3>
-          </div>
-          <button
-            className="print-hidden inline-flex min-h-11 min-w-[136px] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-extrabold text-slate-700 shadow-sm transition hover:text-blue-700 max-sm:w-full"
-            onClick={() =>
-              copyText(result.improvedDescription, "description")
-            }
-            type="button"
-          >
-            {copiedTarget === "description" ? (
-              <Check className="size-4" />
-            ) : (
-              <Clipboard className="size-4" />
-            )}
-            {copiedTarget === "description" ? "복사 완료" : "개선 문구 복사"}
-          </button>
-        </div>
-        <div className="mt-5 whitespace-pre-wrap break-words rounded-2xl border border-blue-100 bg-white p-5 text-[15px] font-medium leading-7 text-slate-700 sm:text-base sm:leading-8">
-          {result.improvedDescription}
-        </div>
-      </article>
-
-      <DetailsSection title="예상 면접 질문 5개" defaultOpen>
-        <div className="grid gap-3 md:grid-cols-2">
-          {result.interviewQuestions.map((question, index) => {
-            const answer = getInterviewAnswer(result, question, index);
-            const copyValue = `Q. ${question}\n\nA. ${answer}`;
-
-            return (
-              <div
-                className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
-                key={`${question}-${index}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-lime-100 text-sm font-black text-lime-800">
-                    Q{index + 1}
-                  </div>
-                  <p className="break-words text-[15px] font-semibold leading-7 text-slate-700">
-                    {question}
-                  </p>
-                </div>
-                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                  <p className="text-xs font-extrabold tracking-normal text-blue-700">
-                    ANSWER EXAMPLE
-                  </p>
-                  <p className="mt-2 break-words text-sm font-semibold leading-7 text-slate-700">
-                    {answer}
-                  </p>
-                </div>
-                <button
-                  className="print-hidden mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 px-4 text-xs font-extrabold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 min-[420px]:w-auto"
-                  onClick={() => copyText(copyValue, `question-${index}`)}
-                  type="button"
-                >
-                  {copiedTarget === `question-${index}` ? (
-                    <Check className="size-3.5" />
-                  ) : (
-                    <Clipboard className="size-3.5" />
-                  )}
-                  {copiedTarget === `question-${index}`
-                    ? "복사 완료"
-                    : "질문 답변 복사"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        <button
-          className="print-hidden mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-slate-950 px-5 text-sm font-extrabold text-white transition hover:bg-blue-600 min-[420px]:w-auto"
-          onClick={() =>
-            copyText(
-              result.interviewQuestions
-                .map(
-                  (question, index) =>
-                    `Q${index + 1}. ${question}\nA. ${getInterviewAnswer(result, question, index)}`,
-                )
-                .join("\n\n"),
-              "questions",
-            )
-          }
-          type="button"
-        >
-          {copiedTarget === "questions" ? (
-            <Check className="size-4" />
-          ) : (
-            <FileQuestion className="size-4" />
-          )}
-          {copiedTarget === "questions"
-            ? "전체 복사 완료"
-            : "전체 질문 답변 복사"}
-        </button>
-      </DetailsSection>
-    </section>
-  );
-}
-
-function ProgressSnapshot({
-  completedCount,
-  currentScore,
-  targetScore,
-  totalCount,
-}: {
-  completedCount: number;
-  currentScore: number;
-  targetScore: number;
-  totalCount: number;
-}) {
-  const completionRate =
-    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-  return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-3">
-      <SnapshotCard label="현재 종합 점수" value={`${currentScore}점`} />
-      <SnapshotCard label="개선 목표" value={`${targetScore}점`} />
-      <SnapshotCard
-        label="우선순위 완료"
-        value={`${completedCount}/${totalCount}`}
-        helper={`${completionRate}% 진행`}
-      />
+      <div id="panel-description" role="tabpanel" aria-labelledby="tab-description" hidden={tab !== "description"}><div className="tab-tools"><button className="button secondary compact" onClick={() => copy(result.improvedDescription, "description")}><Clipboard size={15} />{copied === "description" ? "복사됨" : "수정 문구 복사"}</button></div><DescriptionSection input={input} result={result} /></div>
+      <div id="panel-interview" role="tabpanel" aria-labelledby="tab-interview" hidden={tab !== "interview"}><InterviewSection result={result} /></div>
     </div>
-  );
-}
-
-function SnapshotCard({
-  helper,
-  label,
-  value,
-}: {
-  helper?: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
-      <p className="text-xs font-extrabold tracking-normal text-slate-500">
-        {label}
-      </p>
-      <div className="mt-2 flex items-end justify-between gap-3">
-        <p className="text-2xl font-black tracking-normal text-slate-950">
-          {value}
-        </p>
-        {helper ? (
-          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-extrabold text-blue-700">
-            {helper}
-          </span>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
-function MiniList({ items, title }: { items: string[]; title: string }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 p-5">
-      <p className="text-xs font-extrabold tracking-normal text-slate-500">
-        {title}
-      </p>
-      <ul className="mt-3 grid gap-2.5">
-        {items.slice(0, 3).map((item, index) => (
-          <li
-            className="flex gap-2.5 break-words text-[15px] font-semibold leading-7 text-slate-700"
-            key={`${item}-${index}`}
-          >
-            <span className="mt-2 size-1.5 shrink-0 rounded-full bg-blue-500" />
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function HighlightCard({
-  items,
-  title,
-  tone,
-}: {
-  items: string[];
-  title: string;
-  tone: "blue" | "amber";
-}) {
-  const isBlue = tone === "blue";
-  const Icon = isBlue ? BadgeCheck : TriangleAlert;
-
-  return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="flex items-center gap-3">
-        <div
-          className={`flex size-10 items-center justify-center rounded-2xl ${
-            isBlue
-              ? "bg-blue-50 text-blue-600"
-              : "bg-amber-50 text-amber-600"
-          }`}
-        >
-          <Icon className="size-4.5" />
-        </div>
-        <h3 className="font-black tracking-normal text-slate-950">
-          {title}
-        </h3>
-      </div>
-      <ul className="mt-5 grid gap-3">
-        {items.map((item, index) => (
-          <li
-            className="rounded-2xl bg-slate-50 p-4 text-[15px] leading-7 text-slate-700"
-            key={`${item}-${index}`}
-          >
-            <p className="font-extrabold text-slate-950">
-              {shortTitle(item, index)}
-            </p>
-            <p className="mt-1 break-words">{item}</p>
-          </li>
-        ))}
-      </ul>
-    </article>
-  );
-}
-
-function PriorityPreview({
-  priorities,
-}: {
-  priorities: AnalysisResult["priorities"];
-}) {
-  return (
-    <article className="rounded-3xl border border-blue-100 bg-blue-50 p-5 sm:p-6">
-      <p className="text-xs font-extrabold tracking-normal text-blue-700">
-        TOP PRIORITY
-      </p>
-      <h3 className="mt-1 font-black tracking-normal text-slate-950">
-        개선 우선순위 TOP 3
-      </h3>
-      <ol className="mt-5 grid gap-3">
-        {priorities.map((priority, index) => (
-          <li
-            className="flex gap-3 rounded-2xl bg-white p-4"
-            key={`${priority.title}-${index}`}
-          >
-            <span className="font-black text-blue-600">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <div>
-              <p className="break-words text-[15px] font-extrabold leading-6 text-slate-950">
-                {priority.title}
-              </p>
-              <p className="mt-1 break-words text-sm leading-6 text-slate-500">
-                {priority.action}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </article>
-  );
-}
-
-function DetailsSection({
-  children,
-  title,
-  defaultOpen = false,
-}: {
-  children: ReactNode;
-  title: string;
-  defaultOpen?: boolean;
-}) {
-  return (
-    <details
-      className="group mt-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-7"
-      open={defaultOpen}
-    >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-        <h3 className="text-xl font-black tracking-normal text-slate-950">
-          {title}
-        </h3>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition group-open:rotate-180">
-          <ChevronDown className="size-4" />
-        </span>
-      </summary>
-      <div className="mt-5">{children}</div>
-    </details>
-  );
-}
-
-function ActionCard({
-  action,
-  checked,
-  index,
-  onToggle,
-  reason,
-  title,
-}: {
-  action: string;
-  checked: boolean;
-  index: number;
-  onToggle: () => void;
-  reason: string;
-  title: string;
-}) {
-  return (
-    <div
-      className={`grid gap-4 rounded-2xl border p-5 transition sm:grid-cols-[52px_1fr] sm:p-6 ${
-        checked
-          ? "border-emerald-200 bg-emerald-50"
-          : "border-slate-200 bg-slate-50"
-      }`}
-    >
-      <button
-        aria-pressed={checked}
-        className={`flex size-12 items-center justify-center rounded-2xl text-sm font-black transition ${
-          checked
-            ? "bg-emerald-500 text-white"
-            : "bg-slate-950 text-white hover:bg-blue-600"
-        }`}
-        onClick={onToggle}
-        type="button"
-      >
-        {String(index + 1).padStart(2, "0")}
-      </button>
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          {checked ? (
-            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-extrabold text-emerald-700 ring-1 ring-emerald-200">
-              완료
-            </span>
-          ) : (
-            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-extrabold text-slate-500 ring-1 ring-slate-200">
-              체크 가능
-            </span>
-          )}
-        </div>
-        <h4 className="mt-2 break-words text-base font-extrabold leading-6 text-slate-950">
-          {title}
-        </h4>
-        <p className="mt-2 break-words text-[15px] leading-7 text-slate-600">
-          <span className="font-extrabold text-slate-700">이유: </span>
-          {reason}
-        </p>
-        <p className="mt-3 break-words rounded-xl bg-white px-4 py-3 text-[15px] font-semibold leading-7 text-blue-700">
-          <span className="font-extrabold text-slate-800">예시: </span>
-          {action}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function getInterviewAnswer(
-  result: AnalysisResult,
-  question: string,
-  index: number,
-) {
-  const answer = result.interviewAnswers?.[index]?.trim();
-
-  if (answer) return answer;
-
-  const priority = result.priorities[index % result.priorities.length];
-  const strength = result.strengths[index % result.strengths.length];
-
-  return [
-    `이 질문에는 ${priority?.title ?? "프로젝트 개선 방향"}을 중심으로 답변하겠습니다.`,
-    strength
-      ? `제가 강조할 부분은 ${strength}`
-      : "프로젝트에서 맡은 역할과 문제 해결 과정을 먼저 설명하겠습니다.",
-    priority?.action
-      ? `답변에서는 "${priority.action}"처럼 구체적인 구현 내용과 결과를 함께 말하겠습니다.`
-      : `마지막에는 사용한 기술, 판단 근거, 개선 결과를 연결해서 설명하겠습니다.`,
-    `단순히 기술명을 나열하기보다 왜 그렇게 구현했는지와 사용자 경험에 어떤 변화가 있었는지를 함께 전달하겠습니다.`,
-  ].join(" ");
-}
-
-function splitSentences(text: string) {
-  return text
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.!?。]|다\.)\s+/)
-    .map((sentence) => sentence.trim())
-    .filter(Boolean);
-}
-
-function shortTitle(item: string, index: number) {
-  const [firstClause] = item.split(/[,.。]| 때문에 | 통해 |에서 /);
-
-  return firstClause && firstClause.length <= 28
-    ? firstClause
-    : `핵심 포인트 ${index + 1}`;
+    <div className="print-version"><ReportContent input={input} result={result} completed={completed} mode={mode} /></div>
+  </>;
 }

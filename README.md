@@ -1,114 +1,126 @@
 # CareerLens AI
 
-![CareerLens AI preview](docs/images/careerlens-ai-preview.png)
-
-CareerLens AI는 포트폴리오와 자기소개서 내용을 입력하면 지원 직무 기준으로 점수와 개선 방향을 정리해주는 리뷰 도구입니다. 총점, 세부 점수, 강점, 보완점, 개선 문구, 예상 면접 질문과 답변을 한 화면에서 확인할 수 있습니다.
+포트폴리오와 자기소개서의 **입력 텍스트**를 지원 직무와 채용 공고 기준으로 정리하는 리뷰 도구입니다. 실제 웹페이지, 소스 코드, 이미지 또는 채용 가능성을 평가하지 않습니다.
 
 ## 주요 기능
 
-- 지원 직무별 포트폴리오 분석
-- OpenAI Structured Outputs 기반 JSON 결과 생성
-- 종합 점수와 5개 세부 점수 카드
-- 핵심 강점 3개, 보완점 3개, 개선 우선순위 TOP 5
-- 프로젝트 설명 개선 문구 생성 및 복사
-- 예상 면접 질문 5개와 답변 예시
-- 입력 품질 점검 카드
-- 개선 우선순위 체크리스트
-- 분석 결과 복사 및 PDF 저장
-- Supabase 기반 결과 저장, 공유 리포트, 히스토리, 삭제
-- Supabase 미설정 시 저장 기능 fallback
-- Mock Demo Mode로 API 비용 없이 화면 확인
-- 데스크톱/모바일 반응형 UI
+- 소개, 프로젝트명, 본인 역할, 설명, 기술/도구, 경력 수준 입력
+- 선택 채용 공고 반영, 프로젝트 최대 5개, 설명 합계 80~12,000자
+- OpenAI Responses API + Structured Outputs 기반 결과 생성
+- 설명 준비도, 항목별 입력 인용과 평가 이유, 정보 부족 표시
+- 강점, 보완점, 추가로 필요한 사실, 개선 작업 5개
+- 요약 / 문구 개선 / 면접 준비 탭
+- 원문과 수정 제안 비교, 면접 질문·의도·사실 기반 답변 초안
+- 결과 복사, 브라우저 인쇄 / PDF 저장용 전체 리포트
+- 브라우저별 비공개 기록, 체크리스트 저장, 결과 삭제
+- 별도 생성·해제 가능한 7일 유효 공유 링크
+- 가상 프로젝트의 고정 데모 결과 (AI 호출·저장 없음)
+
+## 데이터와 접근 권한
+
+회원 가입 없이 서버가 발급하는 HttpOnly 쿠키로 개인 기록을 구분합니다. DB에는 쿠키 원문 대신 SHA-256 해시를 저장합니다.
+
+- 개인 조회, 수정, 삭제, 공유 설정은 서버에서 소유자 해시를 확인합니다.
+- 쿠키는 SameSite=Strict이며 운영 환경에서는 Secure를 적용합니다.
+- 다른 브라우저/기기에서는 개인 기록을 열 수 없습니다. 쿠키 삭제 또는 만료 후 접근 복구는 제공하지 않습니다.
+- 개인 리포트는 /report/[id], 공유 리포트는 /share/[token]입니다. 개인 리포트 주소를 공유해도 다른 브라우저는 열 수 없습니다.
+- 공유 토큰은 DB에 해시로 저장하고 7일 뒤 만료됩니다. 새 링크를 만들면 이전 링크는 해제됩니다.
+- 공유 리포트에는 전체 입력 원문과 채용 공고를 표시하지 않습니다. 단, 결과·근거 인용·기술 정보·수정 제안에 입력한 사실이 포함될 수 있으므로 공유 전 확인해야 합니다.
+- 리포트는 noindex, no-store, no-referrer 설정을 사용합니다. 이미 복사된 내용이나 외부 캡처까지 회수할 수는 없습니다.
+- 분석은 OpenAI API로 전송됩니다. 주민등록번호, 연락처, 회사 기밀 등 민감정보를 입력하지 마세요.
+- 분석 요청은 store:false를 사용합니다. 이는 OpenAI의 모든 보관 정책을 제거한다는 의미가 아닙니다.
+- 결과는 저장 버튼을 눌렀을 때만 Supabase에 기록합니다. 저장에는 입력 원문과 선택한 채용 공고도 포함됩니다.
+- 브라우저 로컬 저장소에는 입력 원문을 자동 저장하지 않습니다.
+
+## 보안 및 비용 제한
+
+- API 키와 service-role 키는 서버에서만 사용합니다.
+- 요청 본문 크기, 입력 길이, URL 프로토콜, 결과 스키마와 점수 범위를 검사합니다.
+- URL은 자동으로 요청하지 않으며 주소에 포함된 계정/비밀번호는 받지 않습니다.
+- 실제 분석 결과에 소유자·입력·결과를 묶은 HMAC 서명을 발급합니다. 변경된 결과와 데모는 저장하지 않습니다.
+- 서명은 2시간 유효하며 같은 결과의 중복 저장은 방지합니다.
+- Supabase의 원자적 RPC로 전체 배포의 분석 시도 횟수를 기본 30회/24시간, 브라우저별 5회/24시간으로 제한합니다. Vercel의 전달 IP가 제공되면 추가로 10회/시간을 적용합니다.
+- 저장·삭제·진행·공유 변경은 전체 200회/시간과 작업별 브라우저 제한을 적용합니다.
+- 한도는 고정 시각의 자정이 아니라 각 DB 항목의 24시간 창 기준이며, 실패한 시도도 소비될 수 있습니다.
+- OpenAI 재시도는 0회, 출력 상한은 6,000토큰이며 분석 라우트는 전체 50초 기한을 적용합니다.
+- DB/RPC가 준비되지 않으면 실제 분석을 차단합니다. 서버 메모리 제한으로 조용히 대체하지 않습니다.
+- 익명 세션은 회전 가능하므로 계정별 영구 할당량이 아닙니다. 전체 한도와 OpenAI 프로젝트의 별도 예산 제한을 함께 운영해야 합니다.
+- CSP, 프레임 차단, MIME 스니핑 차단, 권한 제한 헤더를 적용합니다. Next.js 인라인 스크립트 때문에 CSP script-src에는 unsafe-inline이 남아 있습니다.
+- RLS와 클라이언트 DB 권한 차단을 적용하지만, service-role은 RLS를 우회하므로 서버 소유권 검사가 반드시 필요합니다.
 
 ## 기술 스택
 
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
-- OpenAI Responses API
-- Supabase
-- Vercel
+Next.js App Router · React · TypeScript · Tailwind CSS · OpenAI Responses API · Supabase · Vercel
+
+의존성은 package-lock.json에 설치된 버전으로 고정했습니다. 재현 가능한 설치에는 npm ci를 사용합니다.
 
 ## 프로젝트 구조
 
-```txt
-app/
-  api/
-    analyze/     # OpenAI 분석 API route
-    save/        # 분석 결과 저장
-    history/     # 저장 결과 조회/삭제
-  report/[id]/   # 공유 리포트 페이지
-components/      # UI 컴포넌트
-lib/
-  openai.ts      # OpenAI structured output schema
-  supabase.ts    # Supabase server client
-  mock-analysis.ts
-supabase/
-  schema.sql     # analyses 테이블 생성 SQL
-types/
-  index.ts       # 입력/결과 타입
-```
+~~~txt
+app/api/analyze/      # 실제 분석 / 명시적인 데모 응답
+app/api/save/         # 서명 검사 후 개인 결과 저장
+app/api/history/      # 개인 기록 조회 / 삭제 / 진행 저장
+app/api/share/        # 공유 토큰 생성 / 해제
+app/report/[id]/     # 브라우저 소유자 전용 리포트
+app/share/[token]/   # 만료 가능한 읽기 전용 공유 리포트
+components/          # 입력, 결과 탭, 작업 표, 공통 리포트
+lib/security.ts      # 세션, 서명, 제한, 요청 크기/출처 검사
+lib/validation.ts    # 런타임 입력과 결과 검사
+lib/review.ts        # 설명 점수 기준과 직무별 가중 평균
+supabase/schema.sql  # 신규 설치 및 기존 DB 업데이트
+.env.example         # 비밀 값 없는 환경변수 예시
+~~~
+
+## 기존 배포 업데이트: 필수 DB 작업
+
+**코드를 배포하기 전에 Supabase SQL Editor에서 supabase/schema.sql 전체를 실행하세요.**
+
+기존 테이블을 삭제하지 않고 소유자, 입력 JSON, 서명, 진행 상태, 공유 토큰 열과 요청 제한 RPC를 추가합니다. 기존 데이터의 내용을 수정하거나 삭제하지 않습니다.
+
+기존 기록은 소유자를 확인할 수 없으므로 새 앱에서 조회되지 않으며 기존 공개 /report 링크도 더 이상 열리지 않습니다. 모든 과거 기록에 한 사용자 소유권을 일괄 부여하지 마세요. 필요한 과거 데이터는 Supabase 관리 화면에서 별도로 보관할 수 있습니다.
+
+SQL을 적용하지 않은 상태에서는 개인 기록과 실제 AI 분석을 사용할 수 없습니다. 데모 화면은 사용할 수 있습니다.
 
 ## 환경변수
 
-루트에 `.env.local` 파일을 만들고 필요한 값을 넣습니다.
+.env.example을 참고해 로컬의 .env.local과 Vercel 환경변수를 설정합니다.
 
-```env
+~~~env
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-5-mini
-
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-```
+ANALYSIS_DAILY_LIMIT=30
+MOCK_ANALYSIS=false
+~~~
 
-Mock Demo Mode를 사용할 때만 아래 값을 추가합니다.
+ANALYSIS_SIGNING_SECRET은 선택 설정입니다. 32바이트 이상의 무작위 서버 전용 값을 사용할 수 있으며, 생략하면 Supabase service-role 키를 서명에 사용합니다. 해당 키가 바뀌면 아직 저장하지 않은 결과의 서명이 무효화됩니다.
 
-```env
-MOCK_ANALYSIS=true
-NEXT_PUBLIC_MOCK_ANALYSIS=true
-```
+고정 데모 배포에는 MOCK_ANALYSIS=true를 사용합니다. 기존 NEXT_PUBLIC_MOCK_ANALYSIS=true도 호환되므로 실제 배포로 전환할 때는 삭제하거나 false로 설정하세요. 화면의 데모 버튼은 환경변수와 관계없이 유료 호출 없이 동작합니다.
 
-주의:
+.env.local 등 비밀 파일을 Git에 올리지 않고 서버 전용 키에 NEXT_PUBLIC_ 접두사를 붙이지 않습니다.
 
-- `.env.local`은 Git에 올리지 않습니다.
-- `OPENAI_API_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`에는 `NEXT_PUBLIC_`을 붙이지 않습니다.
-- `SUPABASE_URL`은 `https://xxxxx.supabase.co`까지만 입력하고 `/rest/v1`은 붙이지 않습니다.
+## 실행 및 배포
 
-## Supabase 설정
-
-1. Supabase 프로젝트를 생성합니다.
-2. SQL Editor에서 `supabase/schema.sql` 내용을 실행합니다.
-3. Project Settings의 Data API/API 화면에서 Project URL을 복사합니다.
-4. API Keys 화면에서 Secret key 또는 legacy service role key를 복사합니다.
-5. `.env.local`에 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 입력합니다.
-
-## 실행 방법
-
-```bash
-npm install
+~~~powershell
+npm ci
 npm run dev
-```
+~~~
 
-브라우저에서 `http://localhost:3000`으로 접속합니다.
+로컬 기본 주소: http://localhost:3000
 
-## 검증
+Vercel에는 DB SQL을 먼저 적용한 뒤 환경변수를 등록하고 GitHub 변경 내용을 배포합니다. 요청 제한 테이블의 오래된 항목은 운영 정책에 따라 주기적으로 정리하고, 개인 기록의 보관 기간도 운영자가 정해야 합니다.
 
-```bash
-npm run lint
-npm run build
-```
+## 평가 기준과 한계
 
-## 배포
+- 0~39: 핵심 맥락 부족 / 40~59: 일부 맥락 확인 / 60~79: 역할·과정 확인 / 80~100: 문제·판단·결과 연결
+- 확인 가능한 인용이 없는 항목은 null로 표시하고 평균에서 제외합니다.
+- 개발·AI 직무는 경험 근거와 직무 연결성, 디자인은 설명 구조, 콘텐츠는 전달력을 상대적으로 더 반영합니다.
+- 점수는 설명의 참고 평가이며 실제 기술력이나 객관적으로 보정된 채용 점수가 아닙니다.
+- LLM 결과는 틀릴 수 있습니다. 서버는 인용이 입력에 존재하는지 확인하지만 주장 자체의 사실 여부는 확인하지 못합니다.
+- 누락된 구현 경험이나 성과는 [확인 필요]로 남기며 사용자가 확인한 뒤 사용해야 합니다.
+- 브라우저 인쇄를 PDF로 저장하는 방식이며 서버 PDF 파일 생성 기능은 아닙니다.
 
-Vercel 배포 기준:
+## 포트폴리오 설명
 
-1. GitHub 저장소에 프로젝트를 업로드합니다.
-2. Vercel에서 저장소를 Import합니다.
-3. Project Settings > Environment Variables에 `.env.local`과 동일한 값을 등록합니다.
-4. 실제 분석 기능을 사용할 경우 `MOCK_ANALYSIS` 값은 등록하지 않거나 `false`로 설정합니다.
-5. 비용 없이 화면만 확인할 경우 `MOCK_ANALYSIS=true`, `NEXT_PUBLIC_MOCK_ANALYSIS=true`를 설정합니다.
-
-## 포트폴리오 설명 문구
-
-CareerLens AI는 포트폴리오와 자기소개서를 입력받아 지원 직무 기준으로 점수와 피드백을 정리하는 리뷰 도구입니다. Next.js App Router와 TypeScript로 화면과 서버 API를 구성했고, OpenAI Structured Outputs로 분석 결과를 JSON 형태로 받도록 구현했습니다. Supabase로 결과 저장, 히스토리, 공유 리포트, 삭제 기능을 연결했으며, Mock Demo Mode를 통해 API 호출 없이도 결과 화면을 확인할 수 있습니다.
+CareerLens AI는 지원 직무와 채용 공고에 맞춰 포트폴리오 설명을 다듬는 웹 도구입니다. Next.js와 TypeScript로 입력부터 서버 분석, 개인 기록, 선택 공유까지 구성했고, Structured Outputs와 런타임 검사로 결과 형식을 관리했습니다. 입력 근거가 없는 점수는 보류하며, 개인 기록 소유권·분석 결과 서명·DB 기반 요청 제한을 적용했습니다. 결과 탭과 개선 작업 표, 원문 비교, 면접 준비, 전체 인쇄 리포트로 실제 수정 흐름을 연결했습니다.
