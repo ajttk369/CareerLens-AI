@@ -1,6 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { ArrowRight, ChevronDown, Eye, LoaderCircle, Plus, Trash2, X } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CheckCircle2, ChevronDown, Circle, Eye, LoaderCircle, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { EXPERIENCE_LEVELS, JOB_ROLES, type AnalysisInput, type PortfolioProject } from "@/types";
 import { demoInput } from "@/lib/mock-analysis";
 import { validateInput } from "@/lib/validation";
@@ -15,6 +15,12 @@ export function AnalysisForm({ value, onChange, onAnalyze, onDemo, isLoading, co
   const [expanded, setExpanded] = useState(value.projects?.[0]?.id ?? "");
   const projects = value.projects ?? [];
   const length = [value.introduction ?? "", ...projects.map((project) => project.description)].join("\n").trim().length;
+  const qualityChecks = [
+    { label: "설명 80자 이상", passed: length >= 80 && length <= 12000 },
+    { label: "대표 프로젝트 설명", passed: projects.some((project) => project.description.trim().length >= 60) },
+    { label: "주요 기술 / 도구", passed: Boolean(value.techStack.trim()) },
+  ];
+  const passedCount = qualityChecks.filter((check) => check.passed).length;
   function updateProject(id: string, key: keyof PortfolioProject, text: string) {
     onChange({ ...value, projects: projects.map((project) => project.id === id ? { ...project, [key]: text } : project) });
   }
@@ -26,25 +32,29 @@ export function AnalysisForm({ value, onChange, onAnalyze, onDemo, isLoading, co
   }
   if (collapsed) return (
     <aside className="input-summary">
-      <div className="section-heading"><h2>리뷰 입력</h2><span className="status-tag">{value.experienceLevel}</span></div>
+      <div className="input-panel-heading"><span className="panel-icon"><BriefcaseBusiness size={20} /></span><div><p className="eyebrow">INPUT SUMMARY</p><h2>입력 정보 요약</h2></div><span className="status-tag">{value.experienceLevel}</span></div>
       <dl>
         <div><dt>지원 직무</dt><dd>{value.role}</dd></div>
         <div><dt>대표 프로젝트</dt><dd>{projects.map((project) => project.name).filter(Boolean).join(", ") || "소개 설명"}</dd></div>
         <div><dt>기술 / 도구</dt><dd>{value.techStack}</dd></div>
         <div><dt>채용 공고</dt><dd>{value.jobDescription ? "입력됨" : "일반 직무 기준"}</dd></div>
       </dl>
-      <button className="button secondary full-width" onClick={onExpand} disabled={isLoading}>입력 수정</button>
+      <button className="button primary full-width" onClick={onExpand} disabled={isLoading}>입력 수정</button>
       <p className="privacy-note">기록은 이 브라우저에만 연결됩니다. 쿠키를 삭제하면 개인 기록 접근이 해제됩니다.</p>
     </aside>
   );
   return (
     <form className="analysis-form" onSubmit={submit}>
-      <div className="section-heading"><h2>리뷰할 경험</h2><span className="muted">최대 5개 프로젝트</span></div>
+      <div className="input-panel-heading"><span className="panel-icon"><BriefcaseBusiness size={20} /></span><div><p className="eyebrow">ANALYSIS INPUT</p><h2>분석할 정보</h2></div></div>
+      <div className="input-quality">
+        <div className="quality-heading"><span>입력 준비도</span><span className={passedCount === qualityChecks.length ? "status-tag good" : "status-tag attention"}>{passedCount}/{qualityChecks.length}</span></div>
+        <div className="quality-items">{qualityChecks.map((check) => <span key={check.label} className={check.passed ? "quality-passed" : ""}>{check.passed ? <CheckCircle2 size={14} /> : <Circle size={14} />}{check.label}</span>)}</div>
+      </div>
       <fieldset disabled={isLoading} className="form-fields">
-        <div className="form-row">
-          <label htmlFor="job-role">지원 직무<select id="job-role" value={value.role} onChange={(event) => onChange({ ...value, role: event.target.value as AnalysisInput["role"] })}>{JOB_ROLES.map((role) => <option key={role}>{role}</option>)}</select></label>
-          <label htmlFor="experience-level">경력 수준<select id="experience-level" value={value.experienceLevel ?? "신입"} onChange={(event) => onChange({ ...value, experienceLevel: event.target.value as AnalysisInput["experienceLevel"] })}>{EXPERIENCE_LEVELS.map((level) => <option key={level}>{level}</option>)}</select></label>
-        </div>
+        <fieldset className="role-fieldset">
+          <legend>지원 직무</legend>
+          <div className="role-options">{JOB_ROLES.map((role) => <label className="role-option" key={role}><input type="radio" name="job-role" value={role} checked={value.role === role} onChange={() => onChange({ ...value, role })} /><span>{role}</span></label>)}</div>
+        </fieldset>
         <label htmlFor="introduction">소개 / 포트폴리오 설명<textarea id="introduction" rows={4} maxLength={12000} value={value.introduction ?? ""} onChange={(event) => onChange({ ...value, introduction: event.target.value })} placeholder="지원 배경과 가장 강조하고 싶은 경험" /></label>
         <div className="project-section">
           <div className="section-heading"><h3>대표 프로젝트</h3><button className="icon-button" type="button" aria-label="프로젝트 추가" title="프로젝트 추가" disabled={projects.length >= 5} onClick={() => {
@@ -73,8 +83,9 @@ export function AnalysisForm({ value, onChange, onAnalyze, onDemo, isLoading, co
         <div className={"character-count" + (length > 12000 ? " invalid" : "")}><span>설명 합계 {length.toLocaleString()} / 12,000자</span><span>{length < 80 ? "최소 80자" : length > 12000 ? "분량을 줄여 주세요" : "입력 가능"}</span></div>
         <label htmlFor="tech-stack">주요 기술 / 도구<input id="tech-stack" maxLength={800} value={value.techStack} onChange={(event) => onChange({ ...value, techStack: event.target.value })} placeholder="직접 사용한 기술과 도구" required /></label>
         <details className="optional-input">
-          <summary>채용 공고 · 포트폴리오 주소 <span className="optional">선택</span></summary>
+          <summary>추가 정보 <span className="optional">경력 수준 · 채용 공고 · 주소</span></summary>
           <div className="form-fields">
+            <label htmlFor="experience-level">경력 수준<select id="experience-level" value={value.experienceLevel ?? "신입"} onChange={(event) => onChange({ ...value, experienceLevel: event.target.value as AnalysisInput["experienceLevel"] })}>{EXPERIENCE_LEVELS.map((level) => <option key={level}>{level}</option>)}</select></label>
             <label htmlFor="portfolio-url">포트폴리오 URL<input id="portfolio-url" type="url" maxLength={2048} value={value.portfolioUrl} onChange={(event) => onChange({ ...value, portfolioUrl: event.target.value })} placeholder="https://" /></label>
             <p className="muted">주소는 참고 정보입니다. 웹페이지와 이미지를 자동으로 읽지 않습니다.</p>
             <label htmlFor="job-description">채용 공고의 요구 역량<textarea id="job-description" rows={4} maxLength={6000} value={value.jobDescription ?? ""} onChange={(event) => onChange({ ...value, jobDescription: event.target.value })} placeholder="주요 업무, 필수 역량, 우대 사항" /></label>
@@ -85,8 +96,8 @@ export function AnalysisForm({ value, onChange, onAnalyze, onDemo, isLoading, co
       <div className="form-actions">
         <button className="button primary full-width" type="submit" disabled={isLoading || length > 12000}>{isLoading ? <><LoaderCircle size={17} className="spin" /> 분석 중</> : <>AI 리뷰 시작 <ArrowRight size={17} /></>}</button>
         {isLoading ? <button className="button secondary full-width" type="button" onClick={onCancel}><X size={16} /> 대기 취소</button> : <div className="form-row">
-          <button className="button secondary" type="button" onClick={() => { onChange(JSON.parse(JSON.stringify(demoInput))); setExpanded(demoInput.projects?.[0]?.id ?? ""); setError(""); }}>샘플 입력</button>
-          <button className="button secondary" type="button" onClick={onDemo}><Eye size={16} /> 데모 결과</button>
+          <button className="button secondary" type="button" onClick={() => { onChange(JSON.parse(JSON.stringify(demoInput))); setExpanded(demoInput.projects?.[0]?.id ?? ""); setError(""); }}><Sparkles size={16} /> 샘플 입력</button>
+          <button className="button secondary demo-button" type="button" onClick={onDemo}><Eye size={16} /> 데모 결과</button>
         </div>}
       </div>
       <p className="privacy-note">분석 내용은 OpenAI API로 전송됩니다. 연락처, 주민등록번호, 회사 기밀은 제외하세요. 기록 저장은 별도 선택입니다.</p>

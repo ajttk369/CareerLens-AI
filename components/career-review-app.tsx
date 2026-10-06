@@ -19,8 +19,16 @@ export function CareerReviewApp() {
   const [version, setVersion] = useState(0);
   const active = useRef<AbortController | null>(null);
   const generation = useRef(0);
+  const inputRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   useEffect(() => () => { generation.current += 1; active.current?.abort(); }, []);
+  function editInput() {
+    setCollapsed(false);
+    window.requestAnimationFrame(() => {
+      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      inputRef.current?.querySelector<HTMLTextAreaElement>("#introduction")?.focus({ preventScroll: true });
+    });
+  }
   function cancel() {
     generation.current += 1;
     active.current?.abort();
@@ -65,10 +73,10 @@ export function CareerReviewApp() {
     resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   return <section className="workspace section-shell" id="analyze">
-    <div className="input-column print-hidden"><AnalysisForm value={draft} onChange={setDraft} onAnalyze={analyze} onDemo={demo} isLoading={isLoading} collapsed={collapsed} onExpand={() => setCollapsed(false)} onCancel={cancel} /></div>
+    <div className="input-column print-hidden" ref={inputRef}><AnalysisForm value={draft} onChange={setDraft} onAnalyze={analyze} onDemo={demo} isLoading={isLoading} collapsed={collapsed} onExpand={editInput} onCancel={cancel} /></div>
     <div className="result-column" ref={resultRef}>
       {error && <p className="notice error print-hidden" role="alert">{error}</p>}
-      {isLoading ? <div className="loading-result" role="status" aria-live="polite"><LoaderCircle className="spin" size={24} /><h2>입력한 경험을 읽고 있습니다</h2><p>설명 근거와 개선 항목을 정리하는 중입니다.</p></div> : response ? <ResultsDashboard key={version} response={response} onEditInput={() => setCollapsed(false)} /> : <div className="empty-result">
+      {isLoading ? <div className="loading-result" role="status" aria-live="polite"><LoaderCircle className="spin" size={24} /><h2>입력한 경험을 읽고 있습니다</h2><p>설명 근거와 개선 항목을 정리하는 중입니다.</p></div> : response ? <ResultsDashboard key={version} response={response} onEditInput={editInput} /> : <div className="empty-result">
         <FileText size={28} /><h2>아직 리뷰가 없습니다</h2><p>제출된 프로젝트 설명이 없습니다.</p>
         <div className="empty-result-outline"><span>직무 경험 근거 <strong>—</strong></span><span>역할과 전달력 <strong>—</strong></span><span>직무 연결성 <strong>—</strong></span></div>
         <button className="button secondary" type="button" onClick={demo}>샘플 리뷰 보기</button>

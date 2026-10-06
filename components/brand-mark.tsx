@@ -1,6 +1,6 @@
 export function BrandMark() {
   return (
-    <div className="flex size-8 items-center justify-center rounded-md bg-blue-600 text-white">
+    <div className="flex size-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/15">
       <svg
         aria-hidden="true"
         className="size-4.5"
